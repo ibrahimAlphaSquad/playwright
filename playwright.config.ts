@@ -14,9 +14,20 @@ export default defineConfig({
   // Test directory
   testDir: path.join(__dirname, "e2e"),
   // If a test fails, retry it additional 2 times
+
+  // Run all tests in parallel.
+  fullyParallel: false,
+
+  // Retry on CI only.
   retries: 2,
-  // Artifacts folder where screenshots, videos, and traces are stored.
-  outputDir: "test-results/",
+
+
+  // Opt out of parallel tests on CI.
+  workers: 1,
+
+  // Reporter to use
+  reporter: 'list',
+
 
   // Run your local dev server before starting the tests:
   // https://playwright.dev/docs/test-advanced#launching-a-development-web-server-during-the-tests

@@ -21,5 +21,4 @@ jobs:
         if [ -z "${{ secrets.PASSWORD }}" ]; then echo "PASSWORD is not set"; else echo "PASSWORD is set"; fi
         if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then echo "VERCEL_TOKEN is not set"; else echo "VERCEL_TOKEN is set"; fi
         if [ -z "${{ secrets.EMAIL }}" ]; then echo "EMAIL is not set"; else echo "EMAIL is set"; fi
-        if [ -z "${{ variables.NEXT_PUBLIC_APP_ENV }}" ]; then echo "EMAIL is not set"; else echo "EMAIL is set"; fi
     

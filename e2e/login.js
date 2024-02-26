@@ -5,9 +5,9 @@ module.exports = async ({ page }) => {
   // Click on Login button from Landing Page
   await page.getByRole('link', { name: 'Login' }).click();
   // Click on Username and fill up the field
-  await page.getByPlaceholder('Username').fill('testingdevicevivo8488@gmail.com');
+  await page.getByPlaceholder('Username').fill(process.env.USERNAME);
   // Click on Password and fill up the field
-  await page.locator('//input[@placeholder="Password"]').fill('test1234');
+  await page.locator('//input[@placeholder="Password"]').fill(process.env.PASSWORD);
   // Click on Login button and wait to load Home page
   await page.getByRole('button', { name: 'LOGIN' }).click();
 };

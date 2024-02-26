@@ -15,47 +15,11 @@ jobs:
         node-version: 20
     - name: Install dependencies
       run: npm ci
-    - name: log secrets
-      run: echo ${{ secrets.USERNAME }} ${{ secrets.PASSWORD }} $${{ secrets.VERCEL_TOKEN }} ${{ secrets.EMAIL }}
-    - name: Install Playwright Browsers
-      run: npx playwright install --with-deps
-    - name: Run Playwright tests
-      run: USERNAME=${{ secrets.USERNAME }} PASSWORD=${{ secrets.PASSWORD }} npx playwright test
-    - uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: playwright-report
-        path: playwright-report/
-        retention-days: 30
-  deploy_production:
-    needs: e2e_test
-    runs-on: ubuntu-latest
-    if: success()
-    steps:
-      - name: Step in Dependent Job
-        run: echo "This step runs only if e2e_test succeeds."
-      - uses: actions/checkout@v2
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
-      - name: Pull Vercel Environment Information
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-      - name: Build Project Artifacts
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-      - name: Deploy Project Artifacts to Vercel
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
-  failed_e2e_test:
-    needs: e2e_test
-    runs-on: ubuntu-latest
-    if: failure()
-    steps:
-      - name: Failure of e2e_test
-        run: echo "This step runs only if e2e_test fails."    
-  final_job:
-    needs: [e2e_test, deploy_production, failed_e2e_test]
-    if: always() && (needs.e2e_test.result == 'failure' || needs.deploy_production.result == 'success')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Step in Final Job
-        run: echo "Action Completed."
-
- 
+    - name: Check if secrets are available
+      run: |
+        if [ -z "${{ secrets.USERNAME }}" ]; then echo "USERNAME is not set"; else echo "USERNAME is set"; fi
+        if [ -z "${{ secrets.PASSWORD }}" ]; then echo "PASSWORD is not set"; else echo "PASSWORD is set"; fi
+        if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then echo "VERCEL_TOKEN is not set"; else echo "VERCEL_TOKEN is set"; fi
+        if [ -z "${{ secrets.EMAIL }}" ]; then echo "EMAIL is not set"; else echo "EMAIL is set"; fi
+        if [ -z "${{ variables.NEXT_PUBLIC_APP_ENV }}" ]; then echo "EMAIL is not set"; else echo "EMAIL is set"; fi
+    

@@ -1,9 +1,15 @@
 name: Playwright Tests
+
 on:
   push:
-    branches: [ main, staging ]
+    branches: 
+      - main
+      - staging
   pull_request:
-    branches: [ main, staging ]
+    branches: 
+      - main
+      - staging
+
 jobs:
   e2e_test:
     environment: Production
@@ -52,9 +58,13 @@ jobs:
     if: failure()
     steps:
       - name: Failure of e2e_test
-        run: echo "This step runs only if e2e_test fails."    
+        run: echo "This step runs only if e2e_test fails."
+
   final_job:
-    needs: [e2e_test, deploy_production, failed_e2e_test]
+    needs: 
+      - e2e_test
+      - deploy_production
+      - failed_e2e_test
     if: always() && (needs.e2e_test.result == 'failure' || needs.deploy_production.result == 'success')
     runs-on: ubuntu-latest
     steps:

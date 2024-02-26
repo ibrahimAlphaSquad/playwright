@@ -1,9 +1,18 @@
 import { test, expect } from '@playwright/test';
-import loginSpec from './login.spec';
 
 test.describe('Casino Nav 2', () => {
   test.beforeEach(async ({ page }) => {
-    await loginSpec({ page }); // Execute login function before each test
+    await page.goto('https://staging.monkeytilt.com/');
+    // Click on Login button and fill the form
+    await page.click('a[href="/login"]');
+    // Click on Username and fill up the field
+    // USERNAME=arslankhan
+    await page.getByPlaceholder('Username').fill(process.env.USERNAME);
+    // Click on Password and fill up the field
+    // PASSWORD=test1234
+    await page.locator('//input[@placeholder="Password"]').fill(process.env.PASSWORD);
+    // Click on Login button and wait to load Home page
+    await page.getByRole('button', { name: 'LOGIN' }).click();
   });
 
   test('Navigating to group 2 Casino Nav Links and checking for titles', async ({

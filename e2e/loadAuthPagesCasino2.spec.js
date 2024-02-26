@@ -10,6 +10,9 @@ test.describe('Loading Casino Pages group 2', () => {
         'Play Mini Games | Monkey Tilt | VIP Casino',
       );
     });
+    console.log("---------------------------------------------");
+    console.log(${{secrets.USERNAME}});
+    console.log("---------------------------------------------");
     test('Casino Favorites page Load', async ({ page }) => {
       await page.goto('/casino/favorites');
       await expect(page).toHaveTitle('My Favorites | Monkey Tilt | VIP Casino');

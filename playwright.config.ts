@@ -26,7 +26,7 @@ export default defineConfig({
   workers: 1,
 
   // Reporter to use
-  reporter: 'list',
+  reporter: 'html',
 
 
   // Run your local dev server before starting the tests:

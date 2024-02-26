@@ -1,9 +1,9 @@
 const { test, expect } = require('@playwright/test');
-const login = require('./login');
+const loginSpec = require('./login.spec');
 
 test.describe('Casino Nav 2', () => {
   test.beforeEach(async ({ page }) => {
-    await login({ page }); // Execute login function before each test
+    await loginSpec({ page }); // Execute login function before each test
   });
 
   test('Navigating to group 2 Casino Nav Links and checking for titles', async ({

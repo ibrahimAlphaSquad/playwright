@@ -27,7 +27,7 @@ jobs:
         run: |
           USERNAME='${{ secrets.USERNAME }}' 
           PASSWORD='${{ secrets.PASSWORD }}' 
-          npx playwright test:/home/playwrigh
+          npx playwright test:/home/playwright
       - uses: actions/upload-artifact@v3
         if: always()
         with:

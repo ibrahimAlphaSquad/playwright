@@ -1,5 +1,5 @@
-const { test, expect } = require('@playwright/test');
-const loginSpec = require('./login.spec');
+import { test, expect } from '@playwright/test';
+import loginSpec from './login.spec';
 
 test.describe('Casino Nav 2', () => {
   test.beforeEach(async ({ page }) => {

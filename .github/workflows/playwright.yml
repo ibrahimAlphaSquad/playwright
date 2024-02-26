@@ -9,16 +9,13 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-node@v3
-      with:
-        node-version: 20
-    - name: Install dependencies
-      run: npm ci
     - name: Check if secrets are available
       run: |
         if [ -z "${{ secrets.USERNAME }}" ]; then echo "USERNAME is not set"; else echo "USERNAME is set"; fi
         if [ -z "${{ secrets.PASSWORD }}" ]; then echo "PASSWORD is not set"; else echo "PASSWORD is set"; fi
         if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then echo "VERCEL_TOKEN is not set"; else echo "VERCEL_TOKEN is set"; fi
         if [ -z "${{ secrets.EMAIL }}" ]; then echo "EMAIL is not set"; else echo "EMAIL is set"; fi
-    
+        if [ -z "${{ env.ENV_TYPE }}" ]; then echo "EMAIL is not set"; else echo "EMAIL is set"; fi
+        if [ -z "${{ env.NEXT_PUBLIC_APP_ENV }}" ]; then echo "ENV_TYPE is not set"; else echo "ENV_TYPE is set"; fi
+        
+   

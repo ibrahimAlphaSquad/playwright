@@ -6,7 +6,6 @@ on:
 
 jobs:
   e2e_test:
-    environment: 
     runs-on: ubuntu-latest
     steps:
     - name: Log the environment secrets

@@ -1,3 +1,6 @@
+[![Playwright Tests](https://github.com/ibrahimAlphaSquad/playwright/actions/workflows/playwright.yml/badge.svg)](https://github.com/ibrahimAlphaSquad/playwright/actions/workflows/playwright.yml)
+
+
 # Next.js + Playwright
 
 This example shows how to configure Playwright to work with Next.js.

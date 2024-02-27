@@ -6,10 +6,10 @@ on:
 
 jobs:
   e2e_test:
-    environment: Production
+    environment: 
     runs-on: ubuntu-latest
     steps:
     - name: Log the environment secrets
       run: echo "This is vercel secret key ${{ secrets.VERCEL_TOKEN }}"
     - name: Log the environment variables
-      run: echo "This is environment type key ${{ vars.ENV_TYPE }}"
+      run: echo "This is environment type key ${{ vars.ENV_TYPE }} - ${{ vars.NEXT_PUBLIC_APP_ENV }}"

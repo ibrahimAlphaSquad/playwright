@@ -1,0 +1,15 @@
+name: Testing Environments Variables And Secrets
+
+on:
+  push:
+    branches: [ main, staging]
+
+jobs:
+  e2e_test:
+    environment: Production
+    runs-on: ubuntu-latest
+    steps:
+    - name: Log the environment secrets
+      run: echo "This is vercel secret key ${{ secrets.VERCEL_TOKEN }}"
+    - name: Log the environment variables
+      run: echo "This is vercel secret key ${{ Production.ENV_TYPE }}"

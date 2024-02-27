@@ -5,12 +5,63 @@ on:
     branches: [ main, staging]
 
 jobs:
-  e2e_test:
+  log-env:
     environment: 
         name: Production
     runs-on: ubuntu-latest
     steps:
     - name: Log the environment secrets
-      run: echo "This is vercel secret key ${{ secrets.VERCEL_TOKEN }}  ||  ${{ github.event_name }}"
+      run: echo "This is vercel secret key ${{ secrets.VERCEL_TOKEN }}"
     - name: Log the environment variables
       run: echo "This is environment type key ${{ vars.ENV_TYPE }} - ${{ vars.NEXT_PUBLIC_APP_ENV }}"
+    - name: GitHub Events
+      run: 
+        echo "This is the event type ${{ github.event_name }}"
+        echo "This is the event type ${{ github.event }}"
+        echo "This is the event type ${{ github.event_path }}"
+        echo "This is the event type ${{ github.event.inputs }}"
+        echo "This is the event type ${{ github.event.repository }}"
+        echo "This is the event type ${{ github.event.workflow }}"
+        echo "This is the event type ${{ github.event.workflow_run }}"
+        echo "This is the event type ${{ github.event.action }}"
+        echo "This is the event type ${{ github.event.ref }}"
+        echo "This is the event type ${{ github.event.head_commit }}"
+        echo "This is the event type ${{ github.event.pull_request }}"
+        echo "This is the event type ${{ github.event.issue }}"
+        echo "This is the event type ${{ github.event.comment }}"
+        echo "This is the event type ${{ github.event.review }}"
+        echo "This is the event type ${{ github.event.check_run }}"
+        echo "This is the event type ${{ github.event.check_suite }}"
+        echo "This is the event type ${{ github.event.label }}"
+        echo "This is the event type ${{ github.event.milestone }}"
+        echo "This is the event type ${{ github.event.project }}"
+        echo "This is the event type ${{ github.event.project_card }}"
+        echo "This is the event type ${{ github.event.registry_package }}"
+        echo "This is the event type ${{ github.event.release }}"
+        echo "This is the event type ${{ github.event.status }}"
+        echo "This is the event type ${{ github.event.repository_dispatch }}"
+        echo "This is the event type ${{ github.event.schedule }}"
+        echo "This is the event type ${{ github.event.workflow_dispatch }}"
+        echo "This is the event type ${{ github.event.organization }}"
+        echo "This is the event type ${{ github.event.organization_block }}"
+        echo "This is the event type ${{ github.event.member }}"
+        echo "This is the event type ${{ github.event.organization_membership }}"
+        echo "This is the event type ${{ github.event.team }}"
+        echo "This is the event type ${{ github.event.team_add }}"
+        echo "This is the event type ${{ github.event.watch }}"
+        echo "This is the event type ${{ github.event.star }}"
+        echo "This is the event type ${{ github.event.fork }}"
+        echo "This is the event type ${{ github.event.content_reference }}"
+        echo "This is the event type ${{ github.event.repository_vulnerability_alert }}"
+        echo "This is the event type ${{ github.event.security_advisory }}"
+        echo "This is the event type ${{ github.event.secret_scanning_alert }}"
+        echo "This is the event type ${{ github.event.gollum }}"
+        echo "This is the event type ${{ github.event.issues }}"
+        echo "This is the event type ${{ github.event.project_card }}"
+        echo "This is the event type ${{ github.event.project_column }}"
+    - name: Log the environment variables
+      run: echo "This is environment type key ${{ env.ENV_TYPE }} - ${{ env.NEXT_PUBLIC_APP_ENV }}"
+    - name: All github actions
+      run: echo "This is the github actions ${{ github }}"
+    - name: All github events
+      run: echo "This is the github events ${{ github.event }}"

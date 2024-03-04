@@ -77,22 +77,22 @@ jobs:
         name: Lighthouse
         runs-on: ubuntu-latest
         steps:
-            - name: Checkout
-              uses: actions/checkout@v2
+        - name: Checkout
+          uses: actions/checkout@v2
 
-            - name: Install Node.js
-              uses: actions/setup-node@v2
-              with:
-                node-version: 20
+        - name: Install Node.js
+          uses: actions/setup-node@v2
+          with:
+            node-version: 20
 
-            - name: Install dependencies
-              run: npm ci
+        - name: Install dependencies
+          run: npm ci
 
-            - name: Build
-              run: npm run build
+        - name: Build
+          run: npm run build
 
-            - name: run Lighthouse CI
-              run: |
-                npm install -g @lhci/cli@0.13.x
-                lhci autorun
-            env: LHCI_GITHUB_APP_TOKEN : ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+        - name: run Lighthouse CI
+          run: |
+            npm install -g @lhci/cli@0.13.x
+            lhci autorun
+        env: LHCI_GITHUB_APP_TOKEN : ${{ secrets.LHCI_GITHUB_APP_TOKEN }}

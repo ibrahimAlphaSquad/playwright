@@ -1,42 +1,59 @@
-name: Lighthouse KPIs
+# name: Lighthouse KPIs
 
-on:
-  push:
-    branches: 
-      - main
-      - staging
-  pull_request:
-    branches: 
-      - main
-      - staging
+# on:
+#   push:
+#     branches: 
+#       - main
+#       - staging
+#   pull_request:
+#     branches: 
+#       - main
+#       - staging
 
 
+# jobs:
+#     lighthouse:
+#         runs-on: ubuntu-latest
+#         steps:
+#             - name: Checkout
+#               uses: actions/checkout@v2
+
+#             - name: Install Node.js
+#               uses: actions/setup-node@v2
+#               with:
+#                 node-version: 20
+
+#             - name: Install dependencies
+#               run: npm ci
+
+#             - name: install lighthouse
+#               run: npm install -g lighthouse
+
+#             - name: Build
+#               run: npm run build
+
+#             - name: Run Lighthouse
+#               run: npm run lh -- --output json --output-path ./lighthouse-report.json
+
+#             - name: Upload Lighthouse report
+#               uses: actions/upload-artifact@v2
+#               with:
+#                 name: lighthouse-report
+#                 path: lighthouse-report.json
+
+
+name: Lighthouse CI
+on: push
 jobs:
-    lighthouse:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v2
-
-            - name: Install Node.js
-              uses: actions/setup-node@v2
-              with:
-                node-version: 20
-
-            - name: Install dependencies
-              run: npm ci
-
-            - name: install lighthouse
-              run: npm install -g lighthouse
-
-            - name: Build
-              run: npm run build
-
-            - name: Run Lighthouse
-              run: npm run lh -- --output json --output-path ./lighthouse-report.json
-
-            - name: Upload Lighthouse report
-              uses: actions/upload-artifact@v2
-              with:
-                name: lighthouse-report
-                path: lighthouse-report.json
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit URLs using Lighthouse
+        uses: treosh/lighthouse-ci-action@v11
+        with:
+          urls: |
+            https://example.com/
+            https://example.com/blog
+          uploadArtifacts: true # save results as an action artifacts
+          temporaryPublicStorage: true # upload lighthouse report to the temporary storage

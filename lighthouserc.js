@@ -6,7 +6,7 @@ module.exports = {
         },
         collect: {
             url: ['http://localhost:3000/'],
-            startServerCommand: 'rails server -e production',
+            startServerCommand: 'npm run start',
         },
         // assert: {
         //     preset: 'lighthouse:no-pwa',

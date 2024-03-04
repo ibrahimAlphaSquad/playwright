@@ -4,11 +4,11 @@ module.exports = {
         upload: {
             target: 'temporary-public-storage',
         },
-        // collect: {
-        //     staticDistDir: '.next/',
-        //     url: ['http://localhost:3000'],
-        //     startServerCommand: 'npm run start',
-        // },
+        collect: {
+            staticDistDir: '.next/',
+            url: ['http://localhost:3000'],
+            startServerCommand: 'npm run start',
+        },
         // assert: {
         //     preset: 'lighthouse:no-pwa',
         //     assertions: {

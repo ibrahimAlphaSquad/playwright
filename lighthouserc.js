@@ -5,9 +5,8 @@ module.exports = {
             target: 'temporary-public-storage',
         },
         collect: {
-            staticDistDir: '.next/',
-            // url: ['http://localhost:3000'],
-            // startServerCommand: 'npm run start',
+            url: ['http://localhost:3000/'],
+            startServerCommand: 'rails server -e production',
         },
         // assert: {
         //     preset: 'lighthouse:no-pwa',

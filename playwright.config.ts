@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 3000;
 const baseURL = `http://localhost:${PORT}`;
 
 export default defineConfig({
-  testDir: 'tests',
+  testDir: 'tests/e2e',
 
   // Run all tests in parallel.
   fullyParallel: false,

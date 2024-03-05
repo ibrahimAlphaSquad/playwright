@@ -93,7 +93,7 @@ jobs:
           run: yarn build
 
         - name: Install Puppeteer
-          run: yarn add puppeteer
+          run: yarn add puppeteer lighthouse es-main
 
         - name: Run puppeteer
           run: node lh-auth.js

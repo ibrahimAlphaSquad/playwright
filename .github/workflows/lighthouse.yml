@@ -92,6 +92,9 @@ jobs:
         - name: Build
           run: yarn build
 
+        - name: Run puppeteer
+          run: node lh-auth.js
+
         - name: run Lighthouse CI
           run: |
             npm install -g @lhci/cli@0.13.x

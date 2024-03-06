@@ -10,6 +10,11 @@ jobs:
         name: Production
     runs-on: ubuntu-latest
     steps:
+    - name: right environment
+      working-directory: /
+      run: echo > .env.production
+    - name: List directory
+      run: ls -al
     - name: Log the environment secrets
       run: echo "This is vercel secret key ${{ secrets.VERCEL_TOKEN }}"
     - name: Log the environment variables

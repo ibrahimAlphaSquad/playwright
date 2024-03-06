@@ -19,10 +19,11 @@ jobs:
       id: commit_id
       run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
     - name: write environment
-      working-directory: /
+      working-directory: playwright/
       run: |
         pwd
         ls -la
+        cd path/to/directory # Only if you need to change directories
         touch .env.production
         echo "YOUR_ENV_VARIABLE=value" >> .env.production
       shell: /usr/bin/bash -e {0}

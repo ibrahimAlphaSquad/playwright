@@ -6,7 +6,7 @@ on:
 
 permissions:
   id-token: write # This is required for requesting the JWT
-  contents: read  # This is required for actions/checkout
+  contents: read | write # This is required for actions/checkout
 
 jobs:
   logging:
@@ -23,7 +23,7 @@ jobs:
       run: |
         pwd
         ls -la
-        cd path/to/directory # Only if you need to change directories
+        # cd path/to/directory # Only if you need to change directories
         touch .env.production
         echo "YOUR_ENV_VARIABLE=value" >> .env.production
       shell: /usr/bin/bash -e {0}

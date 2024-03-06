@@ -4,13 +4,21 @@ on:
   push:
     branches: [ main, staging]
 
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read  # This is required for actions/checkout
+
 jobs:
   logging:
     environment:
         name: Production
     runs-on: ubuntu-latest
     steps:
-    - name: right environment
+    - uses: actions/checkout@v3
+    - name: Set outputs
+      id: commit_id
+      run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+    - name: write environment
       working-directory: /
       run: echo > .env.production
     - name: List directory

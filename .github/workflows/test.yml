@@ -20,7 +20,12 @@ jobs:
       run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
     - name: write environment
       working-directory: /
-      run: echo > .env.production
+      run: |
+        pwd
+        ls -la
+        touch .env.production
+        echo "YOUR_ENV_VARIABLE=value" >> .env.production
+      shell: /usr/bin/bash -e {0}
     - name: List directory
       run: ls -al
     - name: Log the environment secrets

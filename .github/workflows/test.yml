@@ -22,11 +22,16 @@ jobs:
       run: |
         pwd
         ls -la
-        touch .env.production
-        echo "VERCEL_TOKEN=${{ secrets.VERCEL_TOKEN }}" >> .env
-        echo "ENV_TYPE=${{ secrets.ENV_TYPE }}" >> .env
+        touch .env
+        echo "CONTENTFUL_SPACE_ID='hdnzteah93de'" >> .env
+        echo "CONTENTFUL_ACCESS_TOKEN='Th5r8qPrG8EyTNQX9MoJ5qPDCg-Le05G-E8qE3jijLA'" >> .env
+        echo "NEXT_PUBLIC_SPORTSBOOK_URL = https://sports2.monkeytilt.com/en" >> .env
+        echo "NEXT_PUBLIC_GAME_LAUNCH_URL = https://gamelaunch.everymatrix.com/Loader/StartInfo/" >> .env
+        echo "NEXT_PUBLIC_BASE_URL_V1 = https://monkeytilt.nwacdn.com/" >> .env
+        echo "NEXT_PUBLIC_APP_ENV= prod" >> .env
+        echo "NEXT_PUBLIC_DOMAIN = 3012" >> .env
       shell: /usr/bin/bash -e {0}
-    - name: view file
+    - name: View env file
       run: cat .env
     - name: List directory
       run: ls -al

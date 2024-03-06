@@ -23,8 +23,11 @@ jobs:
         pwd
         ls -la
         touch .env.production
-        echo "YOUR_ENV_VARIABLE=value" >> .env.production
+        echo "VERCEL_TOKEN=${{ secrets.VERCEL_TOKEN }}" >> .env
+        echo "ENV_TYPE=${{ secrets.ENV_TYPE }}" >> .env
       shell: /usr/bin/bash -e {0}
+    - name: view file
+      run: cat .env
     - name: List directory
       run: ls -al
     - name: Log the environment secrets

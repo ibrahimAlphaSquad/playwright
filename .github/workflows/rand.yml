@@ -20,19 +20,19 @@ jobs:
       run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
     - name: Get Current Branch
       id: get_branch
-      run: echo "##[set-output name=branch;]$(echo ${{ github.head_ref || github.ref_name }})"
+      run: echo "::set-output name={name}::{branch}$(echo ${{ github.head_ref || github.ref_name }})"
     - name: Set Environment Type
       id: set_env
       run: |
         BRANCH="${{ steps.get_branch.outputs.branch }}"
         if [ "$BRANCH" == "main" ]; then
-          echo "##[set-output name=env_type;]Production"
+          echo "::set-output name={env_type}::{production}"
         elif [ "$BRANCH" == "uat" ]; then
-          echo "##[set-output name=env_type;]Preview"
+          echo "::set-output name={env_type}::{preview}"
         elif [ "$BRANCH" == "staging" ]; then
-          echo "##[set-output name=env_type;]Development"
+          echo "::set-output name={env_type}::{development}"
         else
-          echo "##[set-output name=env_type;]Unknown"
+          echo "::set-output name={env_type}::{Unknown}"
         fi
     - name: Github Event Name
       run: echo "This is the github event name ${{ github.event_name }}"

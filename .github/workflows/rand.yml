@@ -1,4 +1,4 @@
-name: Testing Environments Variables, Secrets And Some Random Stuff
+name: Testing Some Random Stuff
 
 on:
   push:
@@ -19,7 +19,23 @@ jobs:
       id: commit_id
       run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
     - name: Get Current Branch
-      run: echo "Current branch is ${{ github.head_ref || github.ref_name }}"
+      id: get_branch
+      run: echo "##[set-output name=branch;]$(echo ${{ github.head_ref || github.ref_name }})"
+    - name: Set Environment Type
+      id: set_env
+      run: |
+        BRANCH="${{ steps.get_branch.outputs.branch }}"
+        if [ "$BRANCH" == "main" ]; then
+          echo "##[set-output name=env_type;]Production"
+        elif [ "$BRANCH" == "uat" ]; then
+          echo "##[set-output name=env_type;]Preview"
+        elif [ "$BRANCH" == "staging" ]; then
+          echo "##[set-output name=env_type;]Development"
+        else
+          echo "##[set-output name=env_type;]Unknown"
+        fi
+    - name: Deploy with Vercel
+      run: vercel pull --yes --environment=${{ steps.set_env.outputs.env_type }} --token=${{ secrets.VERCEL_TOKEN }}
     - name: All github actions
       run: echo "This is the github actions ${{ toJson(github) }}"
     - name: All github events

@@ -1,0 +1,26 @@
+name: Testing Environments Variables, Secrets And Some Random Stuff
+
+on:
+  push:
+    branches: [ ui ]
+
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: write # This is required for actions/checkout
+
+jobs:
+  logging:
+    environment:
+        name: Production
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set outputs
+      id: commit_id
+      run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+    - name: Get Current Branch
+      run: echo "Current branch is ${{ github.head_ref || github.ref_name }}"
+    - name: All github actions
+      run: echo "This is the github actions ${{ toJson(github) }}"
+    - name: All github events
+      run: echo "This is the github events ${{ toJson(github.event) }}"

@@ -22,6 +22,7 @@ export default function Page() {
       <p>Welcome to home page</p>
       <p>This deployment should no run</p>
       <p>This deployment for UI branch and it should no run</p>
+      <p>Changes in ui branch</p>
       <form onSubmit={submitHandler} method="post">
         <label>
           Email:

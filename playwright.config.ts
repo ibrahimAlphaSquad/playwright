@@ -15,10 +15,7 @@ export default defineConfig({
   workers: 1,
   
   // Set a timeout for individual tests
-  timeout: 600000,
-
-  // Set a global timeout for the entire test suite
-  globalTimeout: 600000,
+  timeout: 100000,
 
   // Choose a reporter for test results
   reporter: 'list',

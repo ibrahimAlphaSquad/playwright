@@ -42,6 +42,8 @@ jobs:
       run: echo "This is the github event ref ${{ github.event.ref }}"
     - name: Github Event Pull Request Merged
       run: echo "This is the github event pull_request merged ${{ github.event.pull_request.merged }}"
+    - name: Github Event Pull Request Number
+      run: echo "This is the pull_request merged check ${{ github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true }}"
     - name: Deploy with Vercel
       run: vercel pull --yes --environment=${{ steps.set_env.outputs.env_type }} --token=${{ secrets.VERCEL_TOKEN }}
     - name: All github actions

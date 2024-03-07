@@ -1,0 +1,47 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "dev server",
+            "type": "shell",
+            "command": "echo Starting dev server...",
+            "isBackground": true,
+            "presentation": {
+                "panel": "dedicated",
+                "clear": true
+            },
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "test",
+            "type": "shell",
+            "command": "echo Running tests...",
+            "isBackground": true,
+            "presentation": {
+                "panel": "new",
+                "clear": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "git",
+            "type": "shell",
+            "command": "echo Git operations...",
+            "isBackground": true,
+            "presentation": {
+                "panel": "new",
+                "clear": true
+            },
+            "problemMatcher": [],
+            "options": {
+                "shell": {
+                    "executable": "C:\\Program Files\\Git\\bin\\bash.exe"
+                }
+            }
+        }
+    ]
+}

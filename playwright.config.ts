@@ -1,10 +1,6 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig } from '@playwright/test';
 
-// Use process.env.PORT by default and fallback to port 3000
-const PORT = process.env.PORT || 3000;
-
-// Set webServer.url and use.baseURL with the location of the WebServer respecting the correct set port
-const baseURL = `http://localhost:${PORT}`;
+const baseURL = "https://staging.monkeytilt.com/en-CA";
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -17,48 +13,32 @@ export default defineConfig({
 
   // Opt out of parallel tests on CI.
   workers: 1,
+  
+  // Set a timeout for individual tests
+  timeout: 600000,
 
-  // Reporter to use
+  // Set a global timeout for the entire test suite
+  globalTimeout: 600000,
+
+  // Choose a reporter for test results
   reporter: 'list',
 
-  timeout: 60000,
-
-  webServer: {
-    command: "npm run dev",
-    url: baseURL,
-    timeout: 120 * 1000,
-    reuseExistingServer: !process.env.CI,
-  },
-
+  // Customize test execution behavior
   use: {
+    trace : "on",
+    screenshot: "only-on-failure",
     baseURL,
-    trace: "retry-with-trace",
+    headless: true, // Show browser windows during execution
+    video: 'on-first-retry', // Record video when a test fails
   },
-  /* Configure projects for major browsers */
+
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'], viewport: { width: 1920, height: 1080 }, },
-    },
-
-    // {
-    //   name: 'firefox',
-    //   use: { ...devices['Desktop Firefox'] },
-    // },
-
-    // {
-    //   name: 'webkit',
-    //   use: { ...devices['Desktop Safari'] },
-    // },
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
+      use: {
+        browserName: 'chromium',
+        viewport: { width: 1920, height: 1080 },
+      },
+    }
   ],
 });

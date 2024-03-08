@@ -13,6 +13,8 @@ export default function Page() {
     console.log({ email, password })
 
     router.push(`/about?email=${email}&password=${password}`);
+
+    localStorage.setItem("auth", JSON.stringify({ email, password }));
   }
 
   return (

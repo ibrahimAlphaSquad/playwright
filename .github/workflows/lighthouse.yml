@@ -3,13 +3,7 @@ name: Lighthouse KPIs
 on:
   push:
     branches: 
-      - main
-      - staging
-  pull_request:
-    branches: 
-      - main
-      - staging
-
+      - ui
 
 jobs:
     lighthouse:

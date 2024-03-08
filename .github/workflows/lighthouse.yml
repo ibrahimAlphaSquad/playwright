@@ -20,10 +20,10 @@ jobs:
             node-version: 20
 
         - name: Install dependencies
-          run: yarn
+          run: npm install
         
         - name: Install Puppeteer
-          run: yarn add puppeteer
+          run: npm install puppeteer
 
         - name: Build
           run: npm run build

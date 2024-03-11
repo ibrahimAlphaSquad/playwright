@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import login from './login';
+import { test } from '@playwright/test';
+const login = require('./login'); // Assuming both files are in the same directory
 
 test.describe('Primary Nav Links', () => {
   test.beforeEach(async ({ page }) => {
@@ -7,6 +7,7 @@ test.describe('Primary Nav Links', () => {
   });
 
   test('Clicking on all the Primary Nav buttons', async ({ page }) => {
+    // await page.waitForURL('https://716f-2407-d000-b-2f48-4666-ea1c-e4c1-8712.ngrok-free.app/en-CA/');
     // Menu Click
     await page.locator('#hamburger-menu-button').waitFor({ state: 'visible' });
     await page.locator('#hamburger-menu-button').click();

@@ -2,7 +2,7 @@ name: TestsFlow E2E With Playwright
 
 on:
   push:
-    branches: e2e_3
+    branches: ui
 jobs:
   test_flow_for_e2e:
     environment: Production

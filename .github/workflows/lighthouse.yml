@@ -3,13 +3,7 @@ name: Lighthouse KPIs
 on:
   push:
     branches: 
-      - main
-      - staging
-  pull_request:
-    branches: 
-      - main
-      - staging
-
+      - ui
 
 jobs:
     lighthouse:
@@ -26,16 +20,13 @@ jobs:
             node-version: 20
 
         - name: Install dependencies
-          run: yarn
+          run: npm install
+        
+        - name: Install Puppeteer
+          run: npm install puppeteer
 
         - name: Build
-          run: yarn build
-
-        - name: Install Puppeteer
-          run: yarn add puppeteer lighthouse es-main
-
-        - name: Run puppeteer
-          run: node lh-auth.js
+          run: npm run build
 
         - name: run Lighthouse CI
           run: |

@@ -9,7 +9,7 @@ jobs:
     lighthouse:
         environment: Production
         name: Lighthouse
-        runs-on: self-hosted
+        runs-on: shuraim-pc
         steps:
         - name: Checkout
           uses: actions/checkout@v2

@@ -1,5 +1,5 @@
-const { test } = require('@playwright/test');
-const login = require('./login');
+import { test, expect } from '@playwright/test';
+import login from './login';
 
 test.describe('Sports Page Test', () => {
   test.beforeEach(async ({ page }) => {
@@ -7,17 +7,20 @@ test.describe('Sports Page Test', () => {
   });
 
   test('Navigate to all Sports Nav Links', async ({ page }) => {
-    //Home page is loaded
+    await page.locator('#landing-page-sports').waitFor({ state: 'visible' });
+    await page.locator('#landing-page-sports').click();
+
     //Click on Sports button & wait to load the SportsBook page
     await page.locator('#primary-nav-sports-1').waitFor({ state: 'visible' });
-    await page.locator('#primary-nav-sports-1').dblclick({delay:1000});
-    // Click on Sportsbook    
-    await page.click('#sports-secondary-nav-sportsbook', {delay:1000});
+    await page.locator('#primary-nav-sports-1').click();
+
     //Click on Live button & wait to load the page
-    await page.click('#sports-secondary-nav-live-sports', {delay:1000});
+    await page.click('#sports-secondary-nav-live-sports');
+
     // Click on Betting history
-    await page.click('#sports-secondary-nav-betting-history', {delay:1000});
+    await page.click('#sports-secondary-nav-betting-history');
+
     // Click on Sports Settings
-    await page.click('#sports-secondary-nav-sports-settings', {delay:1000});
+    await page.click('#sports-secondary-nav-sports-settings');
   });
 });

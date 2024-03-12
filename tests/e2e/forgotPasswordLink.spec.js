@@ -1,14 +1,15 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 
-test('navigating to Forgot Password and entering an email', async ({ page }) => {
-  //Go to Monkeytilt
-  await page.goto('https://monkeytilt.com/');
+test('Navigating to Forgot Password and entering an email', async ({
+  page,
+}) => {
+  await page.goto('/');
   // Click on Login button
-  await page.click('[href="/login"]');
+  await page.click('a[href="/login"]');
   // Click on Forgot Password button
   await page.getByRole('button', { name: 'Forgot password?' }).click();
   // Click on Enter Email field and enter the email
-  await page.getByPlaceholder('Email').fill('test@gmail.com');
+  await page.getByPlaceholder('Email').fill(process.env.EMAIL);
   // Click on Back button
   await page.getByRole('button', { name: 'Back' }).click();
 });

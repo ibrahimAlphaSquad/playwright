@@ -14,7 +14,7 @@ jobs:
   logging:
       if: github.event.pull_request.merged == true
       environment:
-          name: Production
+          name: Production 
       runs-on: ubuntu-latest
       steps:
       - uses: actions/checkout@v4

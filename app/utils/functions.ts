@@ -1,6 +1,6 @@
 const baseUrl = "https://monkeytilt-api.stage.norway.everymatrix.com/";
 
-export async function getSubVendors() {
+export async function getSubVendors(): Promise<any> {
   return fetch(`${baseUrl}/v1/casino/subVendors?datasource=NewLobby&fields=id,identity,name&language=en`,
     {
       cache: 'no-cache'

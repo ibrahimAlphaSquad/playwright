@@ -6,37 +6,33 @@ on:
 
 jobs:
   logging:
-      environment:
-          name: Production 
-      runs-on: ubuntu-latest
-      steps:
-      - uses: actions/checkout@v4
-      - name: Set outputs
-        id: commit_id
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-      - name: Get Current Branch
-        id: get_branch
-        run: echo "name={name}::{branch} >> $GITHUB_STATE $(echo ${{ github.head_ref || github.ref_name }})"
-      - name: Set Environment Type
-        id: set_env
-        run: |
-          BRANCH="${{ steps.get_branch.outputs.branch }}"
-          if [ "$BRANCH" == "main" ]; then
-            echo "name={env_type}::{production} >> $GITHUB_STATE"
-          elif [ "$BRANCH" == "ui" ]; then
-            echo "name={env_type}::{preview} >> $GITHUB_STATE"
-          elif [ "$BRANCH" == "staging" ]; then
-            echo "name={env_type}::{development} >> $GITHUB_STATE"
-          else
-            echo "name={env_type}::{Unknown} >> $GITHUB_STATE"
-          fi
-      - name: Deploy with Vercel
-        run: vercel pull --yes --environment=${{ steps.set_env.outputs.env_type }} --token=${{ secrets.VERCEL_TOKEN }}
-      - name: Get current branch
-        run: |
-          CURRENT_BRANCH="${{ steps.get_branch.outputs.branch }}"
-          echo "$CURRENT_BRANCH"
-      - name: Get current environment
-        run: |
-          CURRENT_ENV="${{ steps.set_env.outputs.env_type }}"
-          echo "$CURRENT_ENV"
+    environment:
+      name: Production 
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set outputs
+      id: commit_id
+      run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+    - name: Get Current Branch
+      id: get_branch
+      run: echo "::set-output name=branch::$(echo ${{ github.ref_name }})"
+    - name: Set Environment Type
+      id: set_env
+      run: |
+        BRANCH="${{ steps.get_branch.outputs.branch }}"
+        if [ "$BRANCH" == "main" ]; then
+          echo "::set-output name=env_type::production"
+        elif [ "$BRANCH" == "ui" ]; then
+          echo "::set-output name=env_type::preview"
+        elif [ "$BRANCH" == "staging" ]; then
+          echo "::set-output name=env_type::development"
+        else
+          echo "::set-output name=env_type::unknown"
+        fi
+    - name: Deploy with Vercel
+      run: vercel pull --yes --environment=${{ steps.set_env.outputs.env_type }} --token=${{ secrets.VERCEL_TOKEN }}
+    - name: Get current branch
+      run: echo "Current branch is ${{ steps.get_branch.outputs.branch }}"
+    - name: Get current environment
+      run: echo "Current environment is ${{ steps.set_env.outputs.env_type }}"

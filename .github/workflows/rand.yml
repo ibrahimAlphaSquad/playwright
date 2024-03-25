@@ -30,7 +30,7 @@ jobs:
           BRANCH="${{ steps.get_branch.outputs.branch }}"
           if [ "$BRANCH" == "main" ]; then
             echo "name={env_type}::{production} >> $GITHUB_STATE"
-          elif [ "$BRANCH" == "merge-test" ]; then
+          elif [ "$BRANCH" == "ui" ]; then
             echo "name={env_type}::{preview} >> $GITHUB_STATE"
           elif [ "$BRANCH" == "staging" ]; then
             echo "name={env_type}::{development} >> $GITHUB_STATE"

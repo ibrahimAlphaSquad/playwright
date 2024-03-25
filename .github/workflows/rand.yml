@@ -40,5 +40,10 @@ jobs:
       - name: Deploy with Vercel
         run: vercel pull --yes --environment=${{ steps.set_env.outputs.env_type }} --token=${{ secrets.VERCEL_TOKEN }}
       - name: Get current Deployed Branch
-        id: get_deployed_branch
-        run: echo "name={deployed_branch}::{${{ steps.set_env.outputs.env_type }}} >> $GITHUB_STATE $(vercel ls --token=${{ secrets.VERCEL_TOKEN }} | grep -oP '(?<=\s+)(\w+)(?=\s+)' | head -n 1)
+        run: echo "${{ steps.get_branch.outputs.branch }}"
+      - name: Get current Deployed Environment
+        run: echo "${{ steps.set_env.outputs.env_type }}"
+      - name: Get current Deployed Commit
+        run: echo "${{ steps.commit_id.outputs.sha_short }}"
+      - name: Get deployment status
+        run: echo "${{ job.status }}"

@@ -35,7 +35,7 @@ jobs:
     - name: Get Vercel Status
       id: vercel_status
       run: |
-        DEPLOYMENT_URL="$(vercel status --json | jq -r '.[0].url')"
+        DEPLOYMENT_URL="$(vercel status -json | jq -r '.[0].url')"
     - name: Get current branch
       run: echo "Current branch is ${{ steps.get_branch.outputs.branch }}"
     - name: Get current environment

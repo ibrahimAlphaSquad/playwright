@@ -55,4 +55,4 @@ jobs:
         run: echo "This is the github events ${{ toJson(github.event) }}"
       - name: Get current Deployed Branch
         run: |
-          echo "Deployed branch: $branch"
+          echo "Deployed branch: $branch"    

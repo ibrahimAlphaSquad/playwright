@@ -39,4 +39,4 @@ jobs:
     - name: Deploy with Vercel
       run: vercel pull --yes --environment=${{ steps.set_env.outputs.env_type }} --token=${{ secrets.VERCEL_TOKEN }}
     - name: Vercel Deployment Status
-      run: vercel --token=${{ secrets.VERCEL_TOKEN }} 
+      run: vercel --token=${{ secrets.VERCEL_TOKEN }} --environment=${{ steps.set_env.outputs.env_type }}

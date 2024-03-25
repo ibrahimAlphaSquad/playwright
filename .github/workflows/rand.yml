@@ -1,10 +1,8 @@
 name: Testing Some Random Stuff
 
 on:
-  pull_request:
-    branches: [ ui, merge-test ]
-    types:
-      - closed
+  push:
+    branches: [ ui ]
 
 permissions:
   id-token: write # This is required for requesting the JWT
@@ -12,7 +10,6 @@ permissions:
 
 jobs:
   logging:
-      if: github.event.pull_request.merged == true
       environment:
           name: Production 
       runs-on: ubuntu-latest

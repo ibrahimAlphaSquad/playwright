@@ -1,11 +1,18 @@
 name: Testing Some Random Stuff
 
 on:
-  push:
-    branches: [ ui ]
+  pull_request:
+    branches: [ ui, merge-test ]
+    types:
+      - closed
+
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: write # This is required for actions/checkout
 
 jobs:
   logging:
+      if: github.event.pull_request.merged == true
       environment:
           name: Production 
       runs-on: ubuntu-latest
@@ -17,33 +24,35 @@ jobs:
       - name: Get Current Branch
         id: get_branch
         run: echo "name={name}::{branch} >> $GITHUB_STATE $(echo ${{ github.head_ref || github.ref_name }})"
-      - name: Get current Deployed Branch
-        run: echo Deployed branch: ${{branch}}
       - name: Set Environment Type
         id: set_env
         run: |
           BRANCH="${{ steps.get_branch.outputs.branch }}"
           if [ "$BRANCH" == "main" ]; then
             echo "name={env_type}::{production} >> $GITHUB_STATE"
-          elif [ "$BRANCH" == "merge-test" ]; then
+          elif [ "$BRANCH" == "uat" ]; then
             echo "name={env_type}::{preview} >> $GITHUB_STATE"
-          elif [ "$BRANCH" == "ui" ]; then
+          elif [ "$BRANCH" == "staging" ]; then
             echo "name={env_type}::{development} >> $GITHUB_STATE"
           else
             echo "name={env_type}::{Unknown} >> $GITHUB_STATE"
           fi
+      - name: Github Event Name
+        run: echo "This is the github event name ${{ github.event_name }}"
+      - name: Github Event Action
+        run: echo "This is the github event action ${{ github.event.action }}"
+      - name: Github Event Ref
+        run: echo "This is the github event ref ${{ github.event.ref }}"
+      - name: Github Event Pull Request Merged
+        run: echo "This is the github event pull_request merged ${{ github.event.pull_request.merged }}"
+      - name: Github Event Pull Request Number
+        run: echo "This is the pull_request merged check ${{ github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true }}"
       - name: Deploy with Vercel
-        id: deploy
+        run: vercel pull --yes --environment=${{ steps.set_env.outputs.env_type }} --token=${{ secrets.VERCEL_TOKEN }}
+      - name: All github actions
+        run: echo "This is the github actions ${{ toJson(github) }}"
+      - name: All github events
+        run: echo "This is the github events ${{ toJson(github.event) }}"
+      - name: Get current Deployed Branch
         run: |
-          DEPLOYMENT_OUTPUT=$(vercel --token=${{ secrets.VERCEL_TOKEN }} --prod --scope=${{ secrets.VERCEL_TEAM_ID }} --json)
-          echo "${{DEPLOYMENT_OUTPUT}}"
-          echo "vercel_deployment_url=$(echo $DEPLOYMENT_OUTPUT | jq -r '.url')" >> $GITHUB_ENV
-          echo "vercel_deployment_status=$(echo $DEPLOYMENT_OUTPUT | jq -r '.readyState')" >> $GITHUB_ENV
-      - name: Get current Deployed Environment
-        run: echo "Deployed environment: ${{env_type}}"
-      - name: Get current Deployed Commit
-        run: echo "${{ steps.commit_id.outputs.sha_short }}"
-      - name: Get current Deployed URL
-        run: echo "Deployed URL: ${{vercel_deployment_url}}"
-      - name: Get current Deployed Status
-        run: echo "Deployed Status: ${{vercel_deployment_status}}"
+          echo "Deployed branch: $branch"

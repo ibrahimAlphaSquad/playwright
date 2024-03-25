@@ -1,10 +1,11 @@
 name: Testing Some Random Stuff
 
 on:
-  pull_request:
-    branches: [ ui, merge-test ]
-    types:
-      - closed
+  push:
+    branches: [ ui ]
+    # types:
+    #   - closed
+    # if: github.event.pull_request.merged == true
 
 permissions:
   id-token: write # This is required for requesting the JWT
@@ -12,7 +13,6 @@ permissions:
 
 jobs:
   logging:
-      if: github.event.pull_request.merged == true
       environment:
           name: Production 
       runs-on: ubuntu-latest
@@ -32,18 +32,13 @@ jobs:
             echo "name={env_type}::{production} >> $GITHUB_STATE"
           elif [ "$BRANCH" == "merge-test" ]; then
             echo "name={env_type}::{preview} >> $GITHUB_STATE"
-          elif [ "$BRANCH" == "staging" ]; then
+          elif [ "$BRANCH" == "ui" ]; then
             echo "name={env_type}::{development} >> $GITHUB_STATE"
           else
             echo "name={env_type}::{Unknown} >> $GITHUB_STATE"
           fi
       - name: Deploy with Vercel
         run: vercel pull --yes --environment=${{ steps.set_env.outputs.env_type }} --token=${{ secrets.VERCEL_TOKEN }}
-      - name: Current Deployed Branch
-        run: echo "name={deployed_branch}::{${{ steps.get_branch.outputs.branch }}" >> $GITHUB_STATE
-      - name: Set Deployment URL
-        id: set_url
-        run: echo "name={deployment_url}::{https://$VERCEL_URL}" >> $GITHUB_STATE
-      - name: Set Deployment Status
-        id: set_status
-        run: echo "name={deployment_status}::{success}" >> $GITHUB_STATE
+      - name: Get current Deployed Branch
+        id: get_deployed_branch
+        run: echo "name={deployed_branch}::{${{ steps.set_env.outputs.env_type }}} >> $GITHUB_STATE $(vercel ls --token=${{ secrets.VERCEL_TOKEN }} | grep -oP '(?<=\s+)(\w+)(?=\s+)' | head -n 1)

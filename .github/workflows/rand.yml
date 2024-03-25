@@ -1,8 +1,10 @@
 name: Testing Some Random Stuff
 
 on:
-  push:
-    branches: [ ui ]
+  pull_request:
+    branches: [ ui, merge-test ]
+    types:
+      - closed
 
 permissions:
   id-token: write # This is required for requesting the JWT
@@ -10,6 +12,7 @@ permissions:
 
 jobs:
   logging:
+      if: github.event.pull_request.merged == true
       environment:
           name: Production 
       runs-on: ubuntu-latest
@@ -17,21 +20,22 @@ jobs:
       - uses: actions/checkout@v4
       - name: Set outputs
         id: commit_id
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
       - name: Get Current Branch
         id: get_branch
-        run: echo "branch_name=$(echo ${{ github.head_ref || github.ref_name }})" >> $GITHUB_ENV
+        run: echo "name={name}::{branch} >> $GITHUB_STATE $(echo ${{ github.head_ref || github.ref_name }})"
       - name: Set Environment Type
         id: set_env
         run: |
-          if [ "$branch_name" == "main" ]; then
-            echo "env_type=production" >> $GITHUB_ENV
-          elif [ "$branch_name" == "uat" ]; then
-            echo "env_type=preview" >> $GITHUB_ENV
-          elif [ "$branch_name" == "staging" ]; then
-            echo "env_type=development" >> $GITHUB_ENV
+          BRANCH="${{ steps.get_branch.outputs.branch }}"
+          if [ "$BRANCH" == "main" ]; then
+            echo "name={env_type}::{production} >> $GITHUB_STATE"
+          elif [ "$BRANCH" == "merge-test" ]; then
+            echo "name={env_type}::{preview} >> $GITHUB_STATE"
+          elif [ "$BRANCH" == "staging" ]; then
+            echo "name={env_type}::{development} >> $GITHUB_STATE"
           else
-            echo "env_type=unknown" >> $GITHUB_ENV
+            echo "name={env_type}::{Unknown} >> $GITHUB_STATE"
           fi
       - name: Github Event Name
         run: echo "This is the github event name ${{ github.event_name }}"
@@ -44,11 +48,8 @@ jobs:
       - name: Github Event Pull Request Number
         run: echo "This is the pull_request merged check ${{ github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true }}"
       - name: Deploy with Vercel
-        run: vercel pull --yes --environment=${{ env.env_type }} --token=${{ secrets.VERCEL_TOKEN }}
+        run: vercel pull --yes --environment=${{ steps.set_env.outputs.env_type }} --token=${{ secrets.VERCEL_TOKEN }}
       - name: All github actions
         run: echo "This is the github actions ${{ toJson(github) }}"
       - name: All github events
         run: echo "This is the github events ${{ toJson(github.event) }}"
-      - name: Get current Deployed Branch
-        run: |
-          echo "Deployed branch: $branch_name"

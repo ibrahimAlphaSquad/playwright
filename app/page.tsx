@@ -24,6 +24,7 @@ export default function Page() {
       <p>Welcome to home page</p>
       <p>This sentence is designed to test the deployment of "merge-test" when a pull request (PR) opened with "merge-test" is merged. Upon merging the PR, it triggers the deployment; otherwise, no deployments should execute.</p>
       <p>Test 3</p>
+      <p>UI Branch should not deploy</p>
       <form onSubmit={submitHandler} method="post">
         <label>
           Email:

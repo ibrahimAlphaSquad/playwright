@@ -35,7 +35,7 @@ jobs:
     - name: Get Vercel Status
       id: vercel_status
       run: |
-        DEPLOYMENT_URL="$(vercel ls --token=${{ secrets.VERCEL_TOKEN }} | jq -r '.[0].url')"
+        DEPLOYMENT_URL=$(vercel ls --token=${{ secrets.VERCEL_TOKEN }} | grep ${{ steps.commit_id.outputs.sha_short }} | awk '{print $2}')
     - name: Get current branch
       run: echo "Current branch is ${{ steps.get_branch.outputs.branch }}"
     - name: Get current environment
@@ -45,3 +45,6 @@ jobs:
     - name: log values
       run: |
         vercel --token=${{ secrets.VERCEL_TOKEN }} logs ${{ steps.set_env.outputs.env_type }}
+    - name: log values 2
+      run: |
+          vercel --token=${{ secrets.VERCEL_TOKEN }}

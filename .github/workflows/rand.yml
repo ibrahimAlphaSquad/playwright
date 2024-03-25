@@ -34,7 +34,7 @@ jobs:
         id: deploy
         run: |
           DEPLOYMENT_OUTPUT=$(vercel --token=${{ secrets.VERCEL_TOKEN }} --prod --scope=${{ secrets.VERCEL_TEAM_ID }} --json)
-          echo "$DEPLOYMENT_OUTPUT"
+          echo "${{DEPLOYMENT_OUTPUT}}"
           echo "vercel_deployment_url=$(echo $DEPLOYMENT_OUTPUT | jq -r '.url')" >> $GITHUB_ENV
           echo "vercel_deployment_status=$(echo $DEPLOYMENT_OUTPUT | jq -r '.readyState')" >> $GITHUB_ENV
       - name: Get current Deployed Branch

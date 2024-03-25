@@ -1,5 +1,3 @@
-name: Testing Some Random Stuff
-
 on:
   pull_request:
     branches: [ ui, merge-test ]
@@ -14,16 +12,16 @@ jobs:
   logging:
       if: github.event.pull_request.merged == true
       environment:
-          name: Production 
+        name: Production 
       runs-on: ubuntu-latest
       steps:
       - uses: actions/checkout@v4
       - name: Set outputs
         id: commit_id
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
       - name: Get Current Branch
         id: get_branch
-        run: echo "name={name}::{branch} >> $GITHUB_STATE $(echo ${{ github.head_ref || github.ref_name }})"
+        run: echo "::set-output name=branch::$(echo ${{ github.ref_name }})"
       - name: Set Environment Type
         id: set_env
         run: |
@@ -37,13 +35,13 @@ jobs:
           else
             echo "name={env_type}::{Unknown} >> $GITHUB_STATE"
           fi
+      - name: Get current branch
+        run: echo "Current branch is ${{ steps.get_branch.outputs.branch }}"
+      - name: Get current environment
+        run: echo "Current environment is ${{ steps.set_env.outputs.env_type }}"
+      - name: Get commit id
+        run: echo "Commit id is ${{ steps.commit_id.outputs.sha_short }}"
       - name: Deploy with Vercel
         run: vercel pull --yes --environment=${{ steps.set_env.outputs.env_type }} --token=${{ secrets.VERCEL_TOKEN }}
-      - name: Current Deployed Branch
-        run: echo "name={deployed_branch}::{${{ steps.get_branch.outputs.branch }}" >> $GITHUB_STATE
-      - name: Set Deployment URL
-        id: set_url
-        run: echo "name={deployment_url}::{https://$VERCEL_URL}" >> $GITHUB_STATE
-      - name: Set Deployment Status
-        id: set_status
-        run: echo "name={deployment_status}::{success}" >> $GITHUB_STATE
+      - name: Vercel Deployment Status
+        run: vercel --token=${{ secrets.VERCEL_TOKEN }}

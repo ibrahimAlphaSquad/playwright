@@ -38,12 +38,12 @@ jobs:
           echo "vercel_deployment_url=$(echo $DEPLOYMENT_OUTPUT | jq -r '.url')" >> $GITHUB_ENV
           echo "vercel_deployment_status=$(echo $DEPLOYMENT_OUTPUT | jq -r '.readyState')" >> $GITHUB_ENV
       - name: Get current Deployed Branch
-        run: echo "Deployed branch: $branch"
+        run: echo "Deployed branch: ${{branch}}"
       - name: Get current Deployed Environment
-        run: echo "Deployed environment: $env_type"
+        run: echo "Deployed environment: ${{env_type}}"
       - name: Get current Deployed Commit
         run: echo "${{ steps.commit_id.outputs.sha_short }}"
       - name: Get current Deployed URL
-        run: echo "Deployed URL: $vercel_deployment_url"
+        run: echo "Deployed URL: ${{vercel_deployment_url}}"
       - name: Get current Deployed Status
-        run: echo "Deployed Status: $vercel_deployment_status"
+        run: echo "Deployed Status: ${{vercel_deployment_status}}"

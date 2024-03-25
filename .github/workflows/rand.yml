@@ -44,4 +44,4 @@ jobs:
       run: echo "Commit id is ${{ steps.commit_id.outputs.sha_short }}"
     - name: log values
       run: |
-        echo "Deployment URL is ${{ steps.vercel_status.outputs.DEPLOYMENT_URL }}"
+        vercel --token=${{ secrets.VERCEL_TOKEN }} logs ${{ steps.set_env.outputs.env_type }} --since=1h

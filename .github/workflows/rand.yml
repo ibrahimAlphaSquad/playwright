@@ -33,6 +33,10 @@ jobs:
       - name: Deploy with Vercel
         run: vercel pull --yes --environment=${{ steps.set_env.outputs.env_type }} --token=${{ secrets.VERCEL_TOKEN }}
       - name: Get current branch
-        run: echo "${{ steps.get_branch.outputs.branch }}"
+        run: |
+          CURRENT_BRANCH="${{ steps.get_branch.outputs.branch }}"
+          echo "$CURRENT_BRANCH"
       - name: Get current environment
-        run: echo "${{ steps.set_env.outputs.env_type }}"
+        run: |
+          CURRENT_ENV="${{ steps.set_env.outputs.env_type }}"
+          echo "$CURRENT_ENV"

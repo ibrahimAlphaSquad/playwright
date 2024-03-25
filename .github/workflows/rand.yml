@@ -42,9 +42,6 @@ jobs:
       run: echo "Current environment is ${{ steps.set_env.outputs.env_type }}"
     - name: Get commit id
       run: echo "Commit id is ${{ steps.commit_id.outputs.sha_short }}"
-    - name: log values
-      run: |
-        vercel --token=${{ secrets.VERCEL_TOKEN }} logs ${{ steps.set_env.outputs.env_type }}
     - name: log values 2
       run: |
           vercel --token=${{ secrets.VERCEL_TOKEN }}

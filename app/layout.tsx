@@ -41,8 +41,12 @@ export default function RootLayout({
       <body>
         {children}
         <Script
-          src="https://cdn.requestmetrics.com/agent/current/rm.js"
+          // src="https://cdn.requestmetrics.com/agent/current/rm.js"
           strategy="afterInteractive"
+          // data-rm-token="r3ax6ba:p8yi8qd"
+          async
+          // crossorigin="anonymous"
+          src="https://cdn.requestmetrics.com/agent/current/rm.js"
           data-rm-token="r3ax6ba:p8yi8qd"
         />
       </body>

@@ -49,6 +49,14 @@ jobs:
         run: vercel pull --yes --environment=${{ steps.set_env.outputs.env_type }} --token=${{ secrets.VERCEL_TOKEN }}
       - name: Vercel Deployment Status
         run: vercel --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Set Deployment Status
+        run: echo "Deployment status is ${{ steps.vercel.outputs.status }}"
+      - name: Set Deployment URL
+        run: echo "Deployment URL is ${{ steps.vercel.outputs.url }}"
+      - name: Set Deployment Preview URL
+        run: echo "Deployment Preview URL is ${{ steps.vercel.outputs.preview_url }}"
+      - name: Set Deployment Alias
+        run: echo "Deployment Alias is ${{ steps.vercel.outputs.alias }}"
       - name: Output to summary
         run: echo "### Hello world! :rocket:" >> $GITHUB_STEP_SUMMARY
 

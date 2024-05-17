@@ -1,10 +1,12 @@
 name: Deployment Automation
 
 on:
-  pull_request:
-    branches: [ ui, merge-test ]
-    types:
-      - closed
+  # pull_request:
+  #   branches: [ ui, merge-test ]
+  #   types:
+  #     - closed
+  push:
+    branches: [ main, merge-test, staging, ui ]
 
 permissions:
   id-token: write # This is required for requesting the JWT
@@ -47,3 +49,6 @@ jobs:
         run: vercel pull --yes --environment=${{ steps.set_env.outputs.env_type }} --token=${{ secrets.VERCEL_TOKEN }}
       - name: Vercel Deployment Status
         run: vercel --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Output to summary
+        run: echo "### Hello world! :rocket:" >> $GITHUB_STEP_SUMMARY
+

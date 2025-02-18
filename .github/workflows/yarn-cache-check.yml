@@ -1,0 +1,59 @@
+name: Yarn Cache Check and Cleanup
+
+# This is the cron syntax for GitHub Actions
+# ┌───────────── minute (0 - 59)
+# │ ┌───────────── hour (0 - 23)
+# │ │ ┌───────────── day of the month (1 - 31)
+# │ │ │ ┌───────────── month (1 - 12)
+# │ │ │ │ ┌───────────── day of the week (0 - 7) (Sunday to Saturday, 0 and 7 both represent Sunday)
+# │ │ │ │ │
+# │ │ │ │ │
+# * * * * *
+
+# This workflow is triggered on a schedule and manually
+on:
+  schedule:
+    # - cron: '0 0 * * 0'  # Runs every Sunday at midnight
+    - cron: '10 * * * *' # Testing Runs every 30 minutes
+
+jobs:
+  yarn-cache-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+            node-version: lts/*
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      - name: Check Yarn Cache Size
+        id: cache_size
+        run: |
+          CACHE_DIR=$(yarn cache dir)
+          CACHE_SIZE=$(du -sh $CACHE_DIR | awk '{print $1}')
+          echo "Yarn cache size: $CACHE_SIZE"
+          echo "cache_size=$CACHE_SIZE" >> $GITHUB_ENV
+
+      - name: Analyze Cache
+        run: |
+          echo "Performing basic analysis..."
+          yarn cache list
+
+      - name: Clear Yarn Cache if Exceeds Threshold
+        if: ${{ steps.cache_size.outputs.cache_size > '500M' }}  # Threshold set to 500MB
+        run: |
+          echo "Cache size exceeds threshold. Clearing cache..."
+          yarn cache clean
+          echo "Yarn cache cleared."
+
+      - name: Post-Cleanup Cache Size
+        if: ${{ always() }}
+        run: |
+          CACHE_DIR=$(yarn cache dir)
+          CACHE_SIZE=$(du -sh $CACHE_DIR | awk '{print $1}')
+          echo "Post-cleanup Yarn cache size: $CACHE_SIZE"

@@ -2,11 +2,14 @@ name: Yarn Cache Check and Cleanup
 
 on:
     schedule:
-      - cron: '*/10 * * * *'
+      - cron: '10 * * * *'
+        # - cron: '0 0 * * *' # Run every day at midnight
+    workflow_dispatch:
+
 
 jobs:
   yarn-cache-management:
-    runs-on: [self-hosted-brazil, Linux]
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository

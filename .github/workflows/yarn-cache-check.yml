@@ -1,8 +1,8 @@
 name: Yarn Cache Check and Cleanup
 
 on:
-  schedule:
-    - cron: '10 * * * *'  # Runs every 10 minutes
+    schedule:
+      - cron: '*/10 * * * *'
 
 jobs:
   yarn-cache-management:

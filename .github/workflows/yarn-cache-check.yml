@@ -1,36 +1,5 @@
 name: Yarn Cache Check and Cleanup
 
-<<<<<<< HEAD
-# This is the cron syntax for GitHub Actions
-# ┌───────────── minute (0 - 59)
-# │ ┌───────────── hour (0 - 23)
-# │ │ ┌───────────── day of the month (1 - 31)
-# │ │ │ ┌───────────── month (1 - 12)
-# │ │ │ │ ┌───────────── day of the week (0 - 7) (Sunday to Saturday, 0 and 7 both represent Sunday)
-# │ │ │ │ │
-# │ │ │ │ │
-# * * * * *
-
-# This workflow is triggered on a schedule and manually
-on:
-  schedule:
-    # - cron: '0 0 * * 0'  # Runs every Sunday at midnight
-    - cron: '10 * * * *' # Testing Runs every 30 minutes
-
-jobs:
-  yarn-cache-check:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-            node-version: lts/*
-
-      - name: Install Yarn
-=======
 on:
   schedule:
     - cron: '10 * * * *'  # Runs every 10 minutes
@@ -49,7 +18,6 @@ jobs:
           node-version: lts/*
 
       - name: Install Yarn Package Manager
->>>>>>> 89879a1069dcc1d7da603320a8ade3b2100b3236
         run: npm install -g yarn
 
       - name: Check Yarn Cache Size
@@ -57,25 +25,6 @@ jobs:
         run: |
           CACHE_DIR=$(yarn cache dir)
           CACHE_SIZE=$(du -sh $CACHE_DIR | awk '{print $1}')
-<<<<<<< HEAD
-          echo "Yarn cache size: $CACHE_SIZE"
-          echo "cache_size=$CACHE_SIZE" >> $GITHUB_ENV
-
-      - name: Analyze Cache
-        run: |
-          echo "Performing basic analysis..."
-          yarn cache list
-
-      - name: Clear Yarn Cache if Exceeds Threshold
-        if: ${{ steps.cache_size.outputs.cache_size > '500M' }}  # Threshold set to 500MB
-        run: |
-          echo "Cache size exceeds threshold. Clearing cache..."
-          yarn cache clean
-          echo "Yarn cache cleared."
-
-      - name: Post-Cleanup Cache Size
-        if: ${{ always() }}
-=======
           echo "Current Yarn cache size: $CACHE_SIZE"
           echo "cache_size=$CACHE_SIZE" >> $GITHUB_ENV
           echo "Yarn Cache Size: $CACHE_SIZE" > yarn_cache_report.txt
@@ -93,13 +42,10 @@ jobs:
           echo "Yarn cache cleared." >> yarn_cache_report.txt
 
       - name: Display Post-Cleanup Cache Size
->>>>>>> 89879a1069dcc1d7da603320a8ade3b2100b3236
         run: |
           CACHE_DIR=$(yarn cache dir)
           CACHE_SIZE=$(du -sh $CACHE_DIR | awk '{print $1}')
           echo "Post-cleanup Yarn cache size: $CACHE_SIZE"
-<<<<<<< HEAD
-=======
           echo "Post-cleanup Yarn cache size: $CACHE_SIZE" >> yarn_cache_report.txt
 
       - name: Upload Yarn Cache Report
@@ -108,4 +54,3 @@ jobs:
           name: cache-size:${{ env.cache_size }}
           path: yarn_cache_report.txt
           retention-days: 7
->>>>>>> 89879a1069dcc1d7da603320a8ade3b2100b3236

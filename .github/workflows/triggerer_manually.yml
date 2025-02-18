@@ -48,7 +48,7 @@ jobs:
       - name: Upload Yarn Cache Report
         uses: actions/upload-artifact@v4
         with:
-          name: cache-size:${{ env.cache_size }}
+          name: cache-size-${{ env.cache_size }}
           path: yarn_cache_report.txt
           retention-days: 7
   

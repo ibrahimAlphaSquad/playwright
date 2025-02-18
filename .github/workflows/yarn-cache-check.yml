@@ -3,6 +3,7 @@ name: Yarn Cache Check and Cleanup
 on:
   schedule:
     - cron: '20 * * * *'
+  workflow_dispatch: 
 
 jobs:
   yarn-cache-management:

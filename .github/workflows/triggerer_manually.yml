@@ -1,4 +1,4 @@
-name: Yarn Cache Check and Cleanup
+name: Yarn Cache Check and Cleanup Triggerer Manually
 
 on:
   schedule:

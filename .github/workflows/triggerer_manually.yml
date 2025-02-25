@@ -68,8 +68,7 @@ jobs:
           echo "Performing Yarn cache analysis..." >> yarn_cache_report.txt
           yarn cache list >> yarn_cache_report.txt
 
-      - name: Clear Yarn Cache if Threshold Exceeded
-        if: ${{ steps.cache_size.outputs.cache_size_bytes > 500000000 }}  # 500MB in bytes
+      - name: Clear Yarn Cache
         run: |
           echo "Cache size exceeds 500MB. Clearing cache..." >> yarn_cache_report.txt
           yarn cache clean

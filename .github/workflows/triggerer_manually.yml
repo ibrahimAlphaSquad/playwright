@@ -1,4 +1,4 @@
-name: Yarn Cache Check and Cleanup Triggerer Manually
+name: Yarn Cache Check and Cleanup Triggered Manually
 
 on:
   workflow_dispatch:      # Manual trigger for testing
@@ -59,8 +59,6 @@ jobs:
           echo "Current Yarn cache size: $CACHE_SIZE_HR"
           echo "cache_size_bytes=$CACHE_SIZE_BYTES" >> $GITHUB_ENV
           echo "cache_size_hr=$CACHE_SIZE_HR" >> $GITHUB_ENV
-          echo "::set-output name=cache_size_bytes::$CACHE_SIZE_BYTES"
-          echo "::set-output name=cache_size_hr::$CACHE_SIZE_HR"
           echo "Yarn Cache Size: $CACHE_SIZE_HR" > yarn_cache_report.txt
 
       - name: Analyze Yarn Cache
@@ -68,7 +66,8 @@ jobs:
           echo "Performing Yarn cache analysis..." >> yarn_cache_report.txt
           yarn cache list >> yarn_cache_report.txt
 
-      - name: Clear Yarn Cache
+      - name: Clear Yarn Cache if Threshold Exceeded
+        if: ${{ env.cache_size_bytes > 500000000 }}  # Use env variable instead of step output
         run: |
           echo "Cache size exceeds 500MB. Clearing cache..." >> yarn_cache_report.txt
           yarn cache clean

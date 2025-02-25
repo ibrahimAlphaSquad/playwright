@@ -1,13 +1,11 @@
-name: Yarn Cache Check and Cleanup Triggerer Manually
+name: Yarn Cache Check and Cleanup
 
 on:
-  schedule:
-    - cron: '0 0 * * 0'  # Runs every Sunday at midnight
-  workflow_dispatch:      # Manual trigger
+  workflow_dispatch:      # Manual trigger for testing
 
 jobs:
   yarn-cache-management:
-    runs-on: [self-hosted-brazil, Linux]
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
@@ -21,11 +19,42 @@ jobs:
       - name: Install Yarn Package Manager
         run: npm install -g yarn
 
+      - name: Generate Large Yarn Cache (Download 1GB+ Packages)
+        run: |
+          echo "Installing large packages to fill Yarn cache..."
+          
+          # Playwright (Includes browsers, ~500MB)
+          yarn global add playwright
+
+          # Browser automation tools
+          yarn global add puppeteer          # ~300MB
+          
+          # Google Cloud SDK (~200MB)
+          yarn global add @google-cloud/storage
+          yarn global add @google-cloud/functions-framework
+
+          # AWS SDK (~200MB)
+          yarn global add aws-sdk
+          yarn global add @aws-sdk/client-s3
+
+          # IBM Cloud SDK (~150MB)
+          yarn global add ibm-cloud-sdk-core
+          yarn global add ibm-cos-sdk
+
+          # Firebase Tools (~200MB)
+          yarn global add firebase-tools
+
+          # Serverless Framework (~100MB)
+          yarn global add serverless
+
+          # Expo CLI (~150MB)
+          yarn global add expo-cli
+
       - name: Check Yarn Cache Size
         id: cache_size
         run: |
           CACHE_DIR=$(yarn cache dir)
-          CACHE_SIZE_BYTES=$(du -sb $CACHE_DIR | awk '{print $1}')  # Get size in bytes
+          CACHE_SIZE_BYTES=$(du -sb $CACHE_DIR | awk '{print $1}')  # Size in bytes
           CACHE_SIZE_HR=$(du -sh $CACHE_DIR | awk '{print $1}')      # Human-readable
           echo "Current Yarn cache size: $CACHE_SIZE_HR"
           echo "cache_size_bytes=$CACHE_SIZE_BYTES" >> $GITHUB_ENV

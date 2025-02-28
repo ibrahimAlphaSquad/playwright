@@ -66,8 +66,10 @@ jobs:
           echo "Performing Yarn cache analysis..." >> yarn_cache_report.txt
           yarn cache list >> yarn_cache_report.txt
 
-      - name: Clear Yarn Cache
+      - name: Clear Yarn Cache if Threshold Exceeded
+        if: ${{ env.cache_size_bytes > 400000000 }}  # Use env variable instead of step output
         run: |
+          echo "Cache size exceeds 500MB. Clearing cache..." >> yarn_cache_report.txt
           yarn cache clean
           echo "Yarn cache cleared." >> yarn_cache_report.txt
 

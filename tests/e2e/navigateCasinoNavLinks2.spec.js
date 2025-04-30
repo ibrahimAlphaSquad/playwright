@@ -11,13 +11,16 @@ test.describe('Casino Nav 2', () => {
   }) => {
     // await page.locator('#primary-nav-sports-1').click();
 
-    // // await expect(page.setTestIdAttribute('video-landing-page-heading')).toBeVisible();
+    // await expect(page.setTestIdAttribute('video-landing-page-heading')).toBeVisible();
 
     // await page.locator('#primary-nav-casino-0').waitFor({ state: 'visible' });
     // await page.locator('#primary-nav-casino-0').click();
 
+    // await page.getByRole('button', { name: 'Play now' }).click();
 
-    await page.getByRole('button', { name: 'Play now' }).click();
+    await page.locator('#landing-page-casino').waitFor({ state: 'visible' });
+    await page.locator('#landing-page-casino').click();
+
     // Click on Slots
     await page.waitForSelector('#secondary-nav-Slots', { state: 'visible' });
     await page.locator('#secondary-nav-Slots').click();

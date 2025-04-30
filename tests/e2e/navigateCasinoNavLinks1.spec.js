@@ -11,15 +11,13 @@ test.describe('Casino Nav 1', () => {
   }) => {
     // await page.locator('#primary-nav-sports-1').click();
 
-    // await expect(page.setTestIdAttribute('video-landing-page-heading')).toBeVisible();
+    // // await expect(page.setTestIdAttribute('video-landing-page-heading')).toBeVisible();
 
-    // await page.getByRole('button', { name: 'Play now' }).click();
+    // await page.locator('#primary-nav-casino-0').waitFor({ state: 'visible' });
+    // await page.locator('#primary-nav-casino-0').click();
 
-    await page.locator('#landing-page-casino').waitFor({ state: 'visible' });
-    await page.locator('#landing-page-casino').click();
 
-    await page.locator('#primary-nav-casino-0').waitFor({ state: 'visible' });
-    await page.locator('#primary-nav-casino-0').click();
+    await page.getByRole('button', { name: 'Play now' }).click();
     
     // Click on Live Dealer
     await page.waitForSelector('#secondary-nav-Live-Dealer', { state: 'visible' });
@@ -32,8 +30,6 @@ test.describe('Casino Nav 1', () => {
     await expect(page.getByTestId('heading-table-games-page')).toBeVisible();
 
     // Click on Game Shows
-    // await page.locator('#primary-nav-casino-0').waitFor({ state: 'visible' });
-    // await page.locator('#primary-nav-casino-0').click();
     await page.waitForSelector('#secondary-nav-Game-Shows', { state: 'visible' });
     await page.locator('#secondary-nav-Game-Shows').click();
     await expect(page.getByTestId('heading-game-shows-page')).toBeVisible();

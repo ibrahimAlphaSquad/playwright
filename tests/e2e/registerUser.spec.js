@@ -4,7 +4,7 @@ test('Navigating and Registering a user', async ({ page }) => {
   await page.goto('/');
 
   //Click on Signup button from landing page
-  await page.getByRole('link', { name: 'Register' }).click();
+  await page.getByRole('button', { name: 'Register' }).click();
   //Write First Name here
   await page.getByPlaceholder('First Name').fill('Test');
   // //Write Last Name here
@@ -22,7 +22,7 @@ test('Navigating and Registering a user', async ({ page }) => {
 
   // Email marketing
   // await page.locator(':nth-child(1) > div > label.flex > .w-8').click();
-  // // Sms marketing
+  // //Sms marketing
   // await page.locator('.mt-3 > div > label.flex > .w-8').click();
 
   //Click on checkbox my Account button

@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test';
 
-const baseURL = "https://monkeytilt.com/en-CA";
+const baseURL = "https://staging.monkeytilt.com/en-CA";
 
 export default defineConfig({
   testDir: 'tests/e2e',

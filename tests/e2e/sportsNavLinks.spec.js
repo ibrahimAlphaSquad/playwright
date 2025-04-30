@@ -7,8 +7,7 @@ test.describe('Sports Page Test', () => {
   });
 
   test('Navigate to all Sports Nav Links', async ({ page }) => {
-    await page.locator('#landing-page-sports').waitFor({ state: 'visible' });
-    await page.locator('#landing-page-sports').click();
+    await expect(page.getByTestId('video-landing-page-heading')).toBeVisible();
 
     //Click on Sports button & wait to load the SportsBook page
     await page.locator('#primary-nav-sports-1').waitFor({ state: 'visible' });

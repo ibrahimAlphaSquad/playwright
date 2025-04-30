@@ -19,6 +19,6 @@
     ],
     "strictNullChecks": true
   },
-  "include": ["next-env.d.ts", ".next/types/**/*.ts", "**/*.ts", "**/*.tsx", "__tests__/Home.test.jsx", "app/sitemap.ts"],
+  "include": ["next-env.d.ts", ".next/types/**/*.ts", "**/*.ts", "**/*.tsx", "__tests__/Home.test.jsx", "app/sitemap.js"],
   "exclude": ["node_modules"]
 }

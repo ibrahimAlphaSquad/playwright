@@ -1,0 +1,51 @@
+name: Slack incoming-webhook PR Notifications
+on:
+  pull_request:
+    types:
+      - opened
+      - closed
+      - reopened
+      - synchronize
+  pull_request_review:
+    types:
+      - submitted
+  pull_request_review_comment:
+    types:
+      - created
+
+env:
+  SLACK_CHANNEL: alpha-pr-review
+  COLOR_PR_OPENED: "#28a745"
+  COLOR_PR_MERGED: "#6f42c1"
+  COLOR_PR_CLOSED: "#dc3545"
+  COLOR_PR_REOPENED: "#ffc107"
+  COLOR_PR_SYNCHRONIZED: "#17a2b8"
+  COLOR_PR_REVIEW: "#007bff"
+  COLOR_PR_COMMENT: "#28a745"
+  COLOR_UNKNOWN: "#ffc107"
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send to Slack
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          # For full message formatting options, see:
+          # https://api.slack.com/reference/messaging/payload
+          payload: |
+            {
+              "text": "GitHub Action triggered by ${{ github.event_name }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "${{ github.event_name == 'pull_request' && github.event.action == 'opened' && format('New PR opened: <{0}|{1} #{2}>', github.event.pull_request.html_url, github.event.pull_request.title, github.event.pull_request.number) || '' }}${{ github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged && format('PR merged: <{0}|{1} #{2}>', github.event.pull_request.html_url, github.event.pull_request.title, github.event.pull_request.number) || '' }}${{ github.event_name == 'pull_request' && github.event.action == 'closed' && !github.event.pull_request.merged && format('PR closed: <{0}|{1} #{2}>', github.event.pull_request.html_url, github.event.pull_request.title, github.event.pull_request.number) || '' }}${{ github.event_name == 'pull_request_review' && format('Review {0} on <{1}|{2} #{3}>', github.event.review.state, github.event.pull_request.html_url, github.event.pull_request.title, github.event.pull_request.number) || '' }}${{ github.event_name == 'issue_comment' && github.event.issue.pull_request && format('New comment on <{0}|{1} #{2}>', github.event.comment.html_url, github.event.issue.title, github.event.issue.number) || '' }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_INCOMING_WEBHOOK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK

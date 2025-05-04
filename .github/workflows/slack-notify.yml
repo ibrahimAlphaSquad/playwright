@@ -5,13 +5,24 @@ on:
       - opened
       - closed
       - reopened
-      - synchronize # Triggered when new commits are pushed to the PR
+      - synchronize
   pull_request_review:
     types:
       - submitted
   pull_request_review_comment:
     types:
       - created
+
+env:
+  SLACK_CHANNEL: github-notifications
+  COLOR_PR_OPENED: "#28a745"
+  COLOR_PR_MERGED: "#6f42c1"
+  COLOR_PR_CLOSED: "#dc3545"
+  COLOR_PR_REOPENED: "#ffc107"
+  COLOR_PR_SYNCHRONIZED: "#17a2b8"
+  COLOR_PR_REVIEW: "#007bff"
+  COLOR_PR_COMMENT: "#28a745"
+  COLOR_UNKNOWN: "#ffc107"
 
 jobs:
   notify:
@@ -25,55 +36,56 @@ jobs:
           PR_TITLE="${{ github.event.pull_request.title }}"
           PR_URL="${{ github.event.pull_request.html_url }}"
           PR_AUTHOR="${{ github.event.pull_request.user.login }}"
-          
+
           case "$EVENT_TYPE" in
             "opened")
               MESSAGE="New PR created by @$PR_AUTHOR: *$PR_TITLE* <$PR_URL|View PR>"
-              COLOR="good"
+              COLOR="${{ env.COLOR_PR_OPENED }}"
               ;;
             "closed")
               if [ "${{ github.event.pull_request.merged }}" == "true" ]; then
                 MESSAGE="PR merged by @$PR_AUTHOR: *$PR_TITLE* <$PR_URL|View PR>"
-                COLOR="#6f42c1"
+                COLOR="${{ env.COLOR_PR_MERGED }}"
               else
                 MESSAGE="PR closed by @$PR_AUTHOR: *$PR_TITLE* <$PR_URL|View PR>"
-                COLOR="danger"
+                COLOR="${{ env.COLOR_PR_CLOSED }}"
               fi
               ;;
             "reopened")
               MESSAGE="PR reopened by @$PR_AUTHOR: *$PR_TITLE* <$PR_URL|View PR>"
-              COLOR="warning"
+              COLOR="${{ env.COLOR_PR_REOPENED }}"
               ;;
             "synchronize")
               MESSAGE="New commits added to PR by @$PR_AUTHOR: *$PR_TITLE* <$PR_URL|View PR>"
-              COLOR="#17a2b8"
+              COLOR="${{ env.COLOR_PR_SYNCHRONIZED }}"
               ;;
             "submitted")
               REVIEWER="${{ github.event.review.user.login }}"
               REVIEW_STATE="${{ github.event.review.state }}"
               MESSAGE="PR review $REVIEW_STATE by @$REVIEWER on: *$PR_TITLE* <$PR_URL|View PR>"
-              COLOR="#007bff"
+              COLOR="${{ env.COLOR_PR_REVIEW }}"
               ;;
             "created")
               COMMENTER="${{ github.event.comment.user.login }}"
               MESSAGE="New comment by @$COMMENTER on PR: *$PR_TITLE* <$PR_URL|View PR>"
-              COLOR="#28a745"
+              COLOR="${{ env.COLOR_PR_COMMENT }}"
               ;;
             *)
               MESSAGE="Unknown event on PR: *$PR_TITLE* <$PR_URL|View PR>"
-              COLOR="warning"
+              COLOR="${{ env.COLOR_UNKNOWN }}"
               ;;
           esac
-          
+
           echo "SLACK_MESSAGE=$MESSAGE" >> $GITHUB_OUTPUT
           echo "SLACK_COLOR=$COLOR" >> $GITHUB_OUTPUT
 
       - name: Send Slack Notification
         uses: rtCamp/action-slack-notify@v2
         env:
-          SLACK_CHANNEL: github-notifications
+          SLACK_CHANNEL: ${{ env.SLACK_CHANNEL }}
           SLACK_MESSAGE: ${{ steps.message.outputs.SLACK_MESSAGE }}
           SLACK_COLOR: ${{ steps.message.outputs.SLACK_COLOR }}
           SLACK_TITLE: PR Notification
           SLACK_USERNAME: GitHub Bot
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          

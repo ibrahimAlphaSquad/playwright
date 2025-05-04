@@ -29,70 +29,15 @@ jobs:
     name: Send Slack Notification
     runs-on: ubuntu-latest
     steps:
-      - name: Determine Notification Message
-        id: message
-        run: |
-          EVENT_TYPE="${{ github.event.action }}"
-          PR_TITLE="${{ github.event.pull_request.title }}"
-          PR_URL="${{ github.event.pull_request.html_url }}"
-          PR_AUTHOR="${{ github.event.pull_request.user.login }}"
-
-          case "$EVENT_TYPE" in
-            "opened")
-              MESSAGE="New PR created by @$PR_AUTHOR: *$PR_TITLE* <$PR_URL|View PR>"
-              COLOR="${{ env.COLOR_PR_OPENED }}"
-              ;;
-            "closed")
-              if [ "${{ github.event.pull_request.merged }}" == "true" ]; then
-                MESSAGE="PR merged by @$PR_AUTHOR: *$PR_TITLE* <$PR_URL|View PR>"
-                COLOR="${{ env.COLOR_PR_MERGED }}"
-              else
-                MESSAGE="PR closed by @$PR_AUTHOR: *$PR_TITLE* <$PR_URL|View PR>"
-                COLOR="${{ env.COLOR_PR_CLOSED }}"
-              fi
-              ;;
-            "reopened")
-              MESSAGE="PR reopened by @$PR_AUTHOR: *$PR_TITLE* <$PR_URL|View PR>"
-              COLOR="${{ env.COLOR_PR_REOPENED }}"
-              ;;
-            "synchronize")
-              MESSAGE="New commits added to PR by @$PR_AUTHOR: *$PR_TITLE* <$PR_URL|View PR>"
-              COLOR="${{ env.COLOR_PR_SYNCHRONIZED }}"
-              ;;
-            "submitted")
-              REVIEWER="${{ github.event.review.user.login }}"
-              REVIEW_STATE="${{ github.event.review.state }}"
-              MESSAGE="PR review $REVIEW_STATE by @$REVIEWER on: *$PR_TITLE* <$PR_URL|View PR>"
-              COLOR="${{ env.COLOR_PR_REVIEW }}"
-              ;;
-            "created")
-              COMMENTER="${{ github.event.comment.user.login }}"
-              MESSAGE="New comment by @$COMMENTER on PR: *$PR_TITLE* <$PR_URL|View PR>"
-              COLOR="${{ env.COLOR_PR_COMMENT }}"
-              ;;
-            *)
-              MESSAGE="Unknown event on PR: *$PR_TITLE* <$PR_URL|View PR>"
-              COLOR="${{ env.COLOR_UNKNOWN }}"
-              ;;
-          esac
-
-          echo "SLACK_MESSAGE=$MESSAGE" >> $GITHUB_OUTPUT
-          echo "SLACK_COLOR=$COLOR" >> $GITHUB_OUTPUT
-
-      - name: Send Slack Notification
-        uses: slackapi/slack-github-action@v2
+      - name: Post a message in a channel
+        uses: slackapi/slack-github-action@v2.0.0
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
           payload: |
-            {
-              "channel": "${{ env.SLACK_CHANNEL }}",
-              "text": "${{ steps.message.outputs.SLACK_MESSAGE }}",
-              "attachments": [
-                {
-                  "color": "${{ steps.message.outputs.SLACK_COLOR }}",
-                  "title": "PR Notification",
-                  "text": "${{ steps.message.outputs.SLACK_MESSAGE }}"
-                }
-              ]
-            }
+            text: "*GitHub Action build result*: ${{ job.status }}\n${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
+            blocks:
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: "GitHub Action build result: ${{ job.status }}\n${{ github.event.pull_request.html_url || github.event.head_commit.url }}"

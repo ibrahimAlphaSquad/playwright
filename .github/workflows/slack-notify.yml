@@ -14,7 +14,7 @@ on:
       - created
 
 env:
-  SLACK_CHANNEL: github-notifications
+  SLACK_CHANNEL: alpha-pr-review
   COLOR_PR_OPENED: "#28a745"
   COLOR_PR_MERGED: "#6f42c1"
   COLOR_PR_CLOSED: "#dc3545"

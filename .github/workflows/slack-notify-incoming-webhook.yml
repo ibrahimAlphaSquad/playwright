@@ -26,6 +26,8 @@ env:
 
 jobs:
   notify:
+    environment:
+      name: Production
     runs-on: ubuntu-latest
     steps:
       # First, create a step that determines the event type and message to display

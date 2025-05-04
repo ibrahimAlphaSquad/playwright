@@ -6,12 +6,27 @@ on:
       - closed
       - reopened
       - synchronize
+      - locked
+      - unlocked
+      - edited 
+      - assigned
+      - unassigned
+      - labeled
+      - unlabeled
+      - converted_to_draft
+      - ready_for_review
+      - review_requested
+      - review_request_removed
   pull_request_review:
     types:
       - submitted
+      - edited
+      - dismissed
   pull_request_review_comment:
     types:
       - created
+      - edited
+      - deleted
 
 env:
   SLACK_CHANNEL: alpha-pr-review
@@ -30,7 +45,6 @@ jobs:
       name: Production
     runs-on: ubuntu-latest
     steps:
-      # First, create a step that determines the event type and message to display
       - name: Set event message
         id: event-message
         run: |
@@ -63,16 +77,8 @@ jobs:
             echo "COLOR=${{ env.COLOR_UNKNOWN }}" >> $GITHUB_ENV
           fi
 
-          # Set timestamp based on event type
-          if [[ -n "${{ github.event.pull_request.updated_at }}" ]]; then
-            echo "TIMESTAMP=${{ github.event.pull_request.updated_at }}" >> $GITHUB_ENV
-          elif [[ -n "${{ github.event.comment.created_at }}" ]]; then
-            echo "TIMESTAMP=${{ github.event.comment.created_at }}" >> $GITHUB_ENV  
-          elif [[ -n "${{ github.event.pull_request_review.submitted_at }}" ]]; then
-            echo "TIMESTAMP=${{ github.event.pull_request_review.submitted_at }}" >> $GITHUB_ENV
-          else
-            echo "TIMESTAMP=${{ github.event.pull_request.created_at }}" >> $GITHUB_ENV
-          fi
+          # Set current Unix timestamp for the message
+          echo "TIMESTAMP=$(date +%s)" >> $GITHUB_ENV
 
       # Create payload file with simpler expressions
       - name: Create payload file

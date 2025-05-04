@@ -28,36 +28,78 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      # Create payload file first - this is required for v2.0.0
+      # First, create a step that determines the event type and message to display
+      - name: Set event message
+        id: event-message
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "opened" ]]; then
+            echo "MESSAGE=🟢 New PR opened by *${{ github.event.pull_request.user.login }}*" >> $GITHUB_ENV
+            echo "COLOR=${{ env.COLOR_PR_OPENED }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "closed" && "${{ github.event.pull_request.merged }}" == "true" ]]; then
+            echo "MESSAGE=🟣 PR merged by *${{ github.event.sender.login }}*" >> $GITHUB_ENV
+            echo "COLOR=${{ env.COLOR_PR_MERGED }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "closed" ]]; then
+            echo "MESSAGE=🔴 PR closed without merging by *${{ github.event.sender.login }}*" >> $GITHUB_ENV
+            echo "COLOR=${{ env.COLOR_PR_CLOSED }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "reopened" ]]; then
+            echo "MESSAGE=🟡 PR reopened by *${{ github.event.sender.login }}*" >> $GITHUB_ENV
+            echo "COLOR=${{ env.COLOR_PR_REOPENED }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "synchronize" ]]; then
+            echo "MESSAGE=🔵 PR updated with new commits by *${{ github.event.sender.login }}*" >> $GITHUB_ENV
+            echo "COLOR=${{ env.COLOR_PR_SYNCHRONIZED }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event_name }}" == "pull_request_review" ]]; then
+            echo "MESSAGE=👀 Review *${{ github.event.review.state }}* by *${{ github.event.review.user.login }}*" >> $GITHUB_ENV
+            echo "COLOR=${{ env.COLOR_PR_REVIEW }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event_name }}" == "pull_request_review_comment" ]]; then
+            # For comments, truncate them to a reasonable length in the shell
+            COMMENT="${{ github.event.comment.body }}"
+            TRUNCATED_COMMENT="${COMMENT:0:100}"
+            echo "MESSAGE=💬 New review comment by *${{ github.event.comment.user.login }}*: _${TRUNCATED_COMMENT}_" >> $GITHUB_ENV
+            echo "COLOR=${{ env.COLOR_PR_COMMENT }}" >> $GITHUB_ENV
+          else
+            echo "MESSAGE=Unknown event" >> $GITHUB_ENV
+            echo "COLOR=${{ env.COLOR_UNKNOWN }}" >> $GITHUB_ENV
+          fi
+
+          # Set timestamp based on event type
+          if [[ -n "${{ github.event.pull_request.updated_at }}" ]]; then
+            echo "TIMESTAMP=${{ github.event.pull_request.updated_at }}" >> $GITHUB_ENV
+          elif [[ -n "${{ github.event.comment.created_at }}" ]]; then
+            echo "TIMESTAMP=${{ github.event.comment.created_at }}" >> $GITHUB_ENV  
+          elif [[ -n "${{ github.event.pull_request_review.submitted_at }}" ]]; then
+            echo "TIMESTAMP=${{ github.event.pull_request_review.submitted_at }}" >> $GITHUB_ENV
+          else
+            echo "TIMESTAMP=${{ github.event.pull_request.created_at }}" >> $GITHUB_ENV
+          fi
+
+      # Create payload file with simpler expressions
       - name: Create payload file
         id: create-payload
         run: |
           mkdir -p ./tmp
-          echo '{
+          cat > ./tmp/payload.json << EOF
+          {
             "channel": "${{ env.SLACK_CHANNEL }}",
             "attachments": [
               {
-                "color": "${{ github.event_name == '"'"'pull_request'"'"' && github.event.action == '"'"'opened'"'"' && env.COLOR_PR_OPENED || github.event_name == '"'"'pull_request'"'"' && github.event.action == '"'"'closed'"'"' && github.event.pull_request.merged && env.COLOR_PR_MERGED || github.event_name == '"'"'pull_request'"'"' && github.event.action == '"'"'closed'"'"' && !github.event.pull_request.merged && env.COLOR_PR_CLOSED || github.event_name == '"'"'pull_request'"'"' && github.event.action == '"'"'reopened'"'"' && env.COLOR_PR_REOPENED || github.event_name == '"'"'pull_request'"'"' && github.event.action == '"'"'synchronize'"'"' && env.COLOR_PR_SYNCHRONIZED || github.event_name == '"'"'pull_request_review'"'"' && env.COLOR_PR_REVIEW || github.event_name == '"'"'pull_request_review_comment'"'"' && env.COLOR_PR_COMMENT || env.COLOR_UNKNOWN }}",
+                "color": "${{ env.COLOR }}",
                 "pretext": "*${{ github.repository }}*",
                 "title": "${{ github.event.pull_request.title }} #${{ github.event.pull_request.number }}",
                 "title_link": "${{ github.event.pull_request.html_url }}",
-                "text": "${{ github.event_name == '"'"'pull_request'"'"' && github.event.action == '"'"'opened'"'"' && format('"'"'🟢 New PR opened by *{0}*'"'"', github.event.pull_request.user.login) || github.event_name == '"'"'pull_request'"'"' && github.event.action == '"'"'closed'"'"' && github.event.pull_request.merged && format('"'"'🟣 PR merged by *{0}*'"'"', github.event.sender.login) || github.event_name == '"'"'pull_request'"'"' && github.event.action == '"'"'closed'"'"' && !github.event.pull_request.merged && format('"'"'🔴 PR closed without merging by *{0}*'"'"', github.event.sender.login) || github.event_name == '"'"'pull_request'"'"' && github.event.action == '"'"'reopened'"'"' && format('"'"'🟡 PR reopened by *{0}*'"'"', github.event.sender.login) || github.event_name == '"'"'pull_request'"'"' && github.event.action == '"'"'synchronize'"'"' && format('"'"'🔵 PR updated with new commits by *{0}*'"'"', github.event.sender.login) || github.event_name == '"'"'pull_request_review'"'"' && format('"'"'👀 Review *{0}* by *{1}*'"'"', github.event.review.state, github.event.review.user.login) || github.event_name == '"'"'pull_request_review_comment'"'"' && format('"'"'💬 New review comment by *{0}*: _{1}_'"'"', github.event.comment.user.login, github.event.comment.body | slice(0, 100)) || '"'"'Unknown event'"'"' }}",
+                "text": "${{ env.MESSAGE }}",
                 "footer": "GitHub Actions",
                 "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
-                "ts": "${{ github.event.pull_request.updated_at || github.event.comment.created_at || github.event.pull_request_review.submitted_at || github.event.pull_request.created_at }}"
+                "ts": "${{ env.TIMESTAMP }}"
               }
             ]
-          }' > ./tmp/payload.json
+          }
+          EOF
 
       - name: Send to Slack
         uses: slackapi/slack-github-action@v2.0.0
         with:
-          # In v2.0.0, you must use payload-file-path instead of inline payload
           payload-file-path: ./tmp/payload.json
-          # Enable template variable substitution (new requirement in v2.0.0)
           payload-templated: true
-          # Specify webhook URL and type (new requirement in v2.0.0)
           webhook: ${{ secrets.SLACK_INCOMING_WEBHOOK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
-          # Optional: Set to true to make the action fail if Slack API returns an error
           errors: true

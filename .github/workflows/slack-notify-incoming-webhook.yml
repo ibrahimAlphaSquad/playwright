@@ -28,24 +28,36 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
+      # Create payload file first - this is required for v2.0.0
+      - name: Create payload file
+        id: create-payload
+        run: |
+          mkdir -p ./tmp
+          echo '{
+            "channel": "${{ env.SLACK_CHANNEL }}",
+            "attachments": [
+              {
+                "color": "${{ github.event_name == '"'"'pull_request'"'"' && github.event.action == '"'"'opened'"'"' && env.COLOR_PR_OPENED || github.event_name == '"'"'pull_request'"'"' && github.event.action == '"'"'closed'"'"' && github.event.pull_request.merged && env.COLOR_PR_MERGED || github.event_name == '"'"'pull_request'"'"' && github.event.action == '"'"'closed'"'"' && !github.event.pull_request.merged && env.COLOR_PR_CLOSED || github.event_name == '"'"'pull_request'"'"' && github.event.action == '"'"'reopened'"'"' && env.COLOR_PR_REOPENED || github.event_name == '"'"'pull_request'"'"' && github.event.action == '"'"'synchronize'"'"' && env.COLOR_PR_SYNCHRONIZED || github.event_name == '"'"'pull_request_review'"'"' && env.COLOR_PR_REVIEW || github.event_name == '"'"'pull_request_review_comment'"'"' && env.COLOR_PR_COMMENT || env.COLOR_UNKNOWN }}",
+                "pretext": "*${{ github.repository }}*",
+                "title": "${{ github.event.pull_request.title }} #${{ github.event.pull_request.number }}",
+                "title_link": "${{ github.event.pull_request.html_url }}",
+                "text": "${{ github.event_name == '"'"'pull_request'"'"' && github.event.action == '"'"'opened'"'"' && format('"'"'🟢 New PR opened by *{0}*'"'"', github.event.pull_request.user.login) || github.event_name == '"'"'pull_request'"'"' && github.event.action == '"'"'closed'"'"' && github.event.pull_request.merged && format('"'"'🟣 PR merged by *{0}*'"'"', github.event.sender.login) || github.event_name == '"'"'pull_request'"'"' && github.event.action == '"'"'closed'"'"' && !github.event.pull_request.merged && format('"'"'🔴 PR closed without merging by *{0}*'"'"', github.event.sender.login) || github.event_name == '"'"'pull_request'"'"' && github.event.action == '"'"'reopened'"'"' && format('"'"'🟡 PR reopened by *{0}*'"'"', github.event.sender.login) || github.event_name == '"'"'pull_request'"'"' && github.event.action == '"'"'synchronize'"'"' && format('"'"'🔵 PR updated with new commits by *{0}*'"'"', github.event.sender.login) || github.event_name == '"'"'pull_request_review'"'"' && format('"'"'👀 Review *{0}* by *{1}*'"'"', github.event.review.state, github.event.review.user.login) || github.event_name == '"'"'pull_request_review_comment'"'"' && format('"'"'💬 New review comment by *{0}*: _{1}_'"'"', github.event.comment.user.login, github.event.comment.body | slice(0, 100)) || '"'"'Unknown event'"'"' }}",
+                "footer": "GitHub Actions",
+                "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+                "ts": "${{ github.event.pull_request.updated_at || github.event.comment.created_at || github.event.pull_request_review.submitted_at || github.event.pull_request.created_at }}"
+              }
+            ]
+          }' > ./tmp/payload.json
+
       - name: Send to Slack
-        uses: slackapi/slack-github-action@v1.25.0
+        uses: slackapi/slack-github-action@v2.0.0
         with:
-          # For full message formatting options, see:
-          # https://api.slack.com/reference/messaging/payload
-          payload: |
-            {
-              "text": "GitHub Action triggered by ${{ github.event_name }}",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "${{ github.event_name == 'pull_request' && github.event.action == 'opened' && format('New PR opened: <{0}|{1} #{2}>', github.event.pull_request.html_url, github.event.pull_request.title, github.event.pull_request.number) || '' }}${{ github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged && format('PR merged: <{0}|{1} #{2}>', github.event.pull_request.html_url, github.event.pull_request.title, github.event.pull_request.number) || '' }}${{ github.event_name == 'pull_request' && github.event.action == 'closed' && !github.event.pull_request.merged && format('PR closed: <{0}|{1} #{2}>', github.event.pull_request.html_url, github.event.pull_request.title, github.event.pull_request.number) || '' }}${{ github.event_name == 'pull_request_review' && format('Review {0} on <{1}|{2} #{3}>', github.event.review.state, github.event.pull_request.html_url, github.event.pull_request.title, github.event.pull_request.number) || '' }}${{ github.event_name == 'issue_comment' && github.event.issue.pull_request && format('New comment on <{0}|{1} #{2}>', github.event.comment.html_url, github.event.issue.title, github.event.issue.number) || '' }}"
-                  }
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_INCOMING_WEBHOOK_WEBHOOK_URL }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+          # In v2.0.0, you must use payload-file-path instead of inline payload
+          payload-file-path: ./tmp/payload.json
+          # Enable template variable substitution (new requirement in v2.0.0)
+          payload-templated: true
+          # Specify webhook URL and type (new requirement in v2.0.0)
+          webhook: ${{ secrets.SLACK_INCOMING_WEBHOOK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          # Optional: Set to true to make the action fail if Slack API returns an error
+          errors: true

@@ -80,12 +80,19 @@ jobs:
           echo "SLACK_COLOR=$COLOR" >> $GITHUB_OUTPUT
 
       - name: Send Slack Notification
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_CHANNEL: ${{ env.SLACK_CHANNEL }}
-          SLACK_MESSAGE: ${{ steps.message.outputs.SLACK_MESSAGE }}
-          SLACK_COLOR: ${{ steps.message.outputs.SLACK_COLOR }}
-          SLACK_TITLE: PR Notification
-          SLACK_USERNAME: GitHub Bot
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-          
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "channel": "${{ env.SLACK_CHANNEL }}",
+              "text": "${{ steps.message.outputs.SLACK_MESSAGE }}",
+              "attachments": [
+                {
+                  "color": "${{ steps.message.outputs.SLACK_COLOR }}",
+                  "title": "PR Notification",
+                  "text": "${{ steps.message.outputs.SLACK_MESSAGE }}"
+                }
+              ]
+            }

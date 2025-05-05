@@ -92,7 +92,7 @@ jobs:
         if: github.event_name == 'pull_request' && github.event.action != 'opened'
         id: check-slack-messages
         env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_USER_OAUTH_TOKEN: ${{ secrets.SLACK_USER_OAUTH_TOKEN }}
         run: |
           # Format a search query to find messages about this PR
           PR_NUMBER="${{ github.event.pull_request.number }}"
@@ -103,7 +103,7 @@ jobs:
           
           # Search for messages
           SEARCH_RESPONSE=$(curl -s -X POST \
-            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+            -H "Authorization: Bearer $SLACK_USER_OAUTH_TOKEN" \
             -H "Content-Type: application/x-www-form-urlencoded" \
             --data-urlencode "query=$SEARCH_QUERY" \
             --data-urlencode "sort=timestamp" \

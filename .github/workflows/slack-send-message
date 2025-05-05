@@ -1,0 +1,40 @@
+name: Slack incoming-webhook PR Notifications
+on:
+  pull_request:
+    types:
+      - opened
+      - closed
+      - reopened
+      - synchronize
+  pull_request_review:
+    types:
+      - submitted
+  pull_request_review_comment:
+    types:
+      - created
+
+env:
+  SLACK_CHANNEL: alpha-pr-review
+  COLOR_PR_OPENED: "#28a745"
+  COLOR_PR_MERGED: "#6f42c1"
+  COLOR_PR_CLOSED: "#dc3545"
+  COLOR_PR_REOPENED: "#ffc107"
+  COLOR_PR_SYNCHRONIZED: "#17a2b8"
+  COLOR_PR_REVIEW: "#007bff"
+  COLOR_PR_COMMENT: "#28a745"
+  COLOR_UNKNOWN: "#ffc107"
+
+jobs:
+  notify:
+    environment:
+        name: Production
+    runs-on: ubuntu-latest
+    steps:
+    - name: Post text to a Slack channel
+      uses: slackapi/slack-github-action@v2.0.0
+      with:
+        method: chat.postMessage
+        token: ${{ secrets.SLACK_BOT_TOKEN }}
+        payload: |
+          channel: ${{ secrets.SLACK_CHANNEL_ID }}
+          text: "howdy <@channel>!"

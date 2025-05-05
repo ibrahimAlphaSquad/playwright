@@ -6,13 +6,13 @@ on:
       - closed
       - reopened
       - synchronize
-      - locked
-      - unlocked
+      # - locked
+      # - unlocked
       - edited 
-      - assigned
-      - unassigned
-      - labeled
-      - unlabeled
+      # - assigned
+      # - unassigned
+      # - labeled
+      # - unlabeled
       - converted_to_draft
       - ready_for_review
       - review_requested
@@ -23,6 +23,18 @@ on:
       - edited
       - dismissed
   pull_request_review_comment:
+    types:
+      - created
+      - edited
+      - deleted
+  discussion:
+    types:
+      - created
+      - edited
+      - deleted
+      - answered
+      - unanswered
+  discussion_comment:
     types:
       - created
       - edited
@@ -45,6 +57,33 @@ jobs:
       name: Production
     runs-on: ubuntu-latest
     steps:
+      # For synchronize events, fetch the latest commit message using GitHub API
+      - name: Get commit message for synchronize event
+        if: github.event_name == 'pull_request' && github.event.action == 'synchronize'
+        id: get-commit-message
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Get the head commit SHA
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          
+          # Use GitHub CLI to get commit info
+          COMMIT_INFO=$(gh api repos/${{ github.repository }}/commits/${HEAD_SHA})
+          
+          # Extract the commit message
+          COMMIT_MSG=$(echo $COMMIT_INFO | jq -r '.commit.message')
+          
+          # Escape newlines and other special chars for GitHub Actions
+          COMMIT_MSG=$(echo "$COMMIT_MSG" | tr '\n' ' ' | sed 's/"/\\"/g')
+          
+          # Set output - save commit message in a way that handles multiline messages
+          echo "COMMIT_MESSAGE<<EOF" >> $GITHUB_ENV
+          echo "$COMMIT_MSG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          
+          # For debugging
+          echo "Retrieved commit message for SHA: ${HEAD_SHA}"
+
       - name: Set event message
         id: event-message
         run: |
@@ -52,6 +91,11 @@ jobs:
           PR_DETAILS="*Title:* ${{ github.event.pull_request.title }}\n*Branch:* ${{ github.event.pull_request.head.ref }} → ${{ github.event.pull_request.base.ref }}\n*Author:* ${{ github.event.pull_request.user.login }}\n*Created:* $(date -d "${{ github.event.pull_request.created_at }}" "+%Y-%m-%d %H:%M:%S UTC")"
           
           if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "opened" ]]; then
+            # Get PR body for description
+            PR_BODY="${{ github.event.pull_request.body }}"
+            # Truncate PR description to avoid too long messages
+            TRUNCATED_BODY="${PR_BODY:0:200}${PR_BODY:200:+...}"
+            
             # Details for new PR
             echo "MESSAGE=🟢 *New PR opened by ${{ github.event.pull_request.user.login }}*\n\n${PR_DETAILS}\n\n*Description:* ${TRUNCATED_BODY}" >> $GITHUB_ENV
             echo "COLOR=${{ env.COLOR_PR_OPENED }}" >> $GITHUB_ENV
@@ -76,12 +120,16 @@ jobs:
             
           elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "synchronize" ]]; then
             # Details for new commits pushed to PR
-            SYNC_DETAILS="*Updated by:* ${{ github.event.sender.login }}\n*Update time:* $(date "+%Y-%m-%d %H:%M:%S UTC")\n*Latest commit:* ${{ github.event.after }}"
-            # Get the commit message for the latest commit
-            if [[ -n "${{ github.event.after }}" ]]; then
-              COMMIT_MSG="*Commit message:* ${COMMIT_MSG:0:100}${COMMIT_MSG:100:+...}"
-              SYNC_DETAILS="${SYNC_DETAILS}\n${COMMIT_MSG}"
+            SYNC_DETAILS="*Updated by:* ${{ github.event.sender.login }}\n*Update time:* $(date "+%Y-%m-%d %H:%M:%S UTC")\n*Latest commit:* \`${{ github.event.pull_request.head.sha }}@${{ github.event.pull_request.head.ref }}\`"
+            
+            # Add the commit message from previous step
+            if [[ -n "${{ env.COMMIT_MESSAGE }}" ]]; then
+              # Truncate commit message to 150 chars
+              COMMIT_MSG="${{ env.COMMIT_MESSAGE }}"
+              TRUNCATED_COMMIT_MSG="${COMMIT_MSG:0:150}${COMMIT_MSG:150:+...}"
+              SYNC_DETAILS="${SYNC_DETAILS}\n*Commit message:* ${TRUNCATED_COMMIT_MSG}"
             fi
+            
             echo "MESSAGE=🔵 *PR updated with new commits by ${{ github.event.sender.login }}*\n\n${PR_DETAILS}\n\n${SYNC_DETAILS}" >> $GITHUB_ENV
             echo "COLOR=${{ env.COLOR_PR_SYNCHRONIZED }}" >> $GITHUB_ENV
 

@@ -119,21 +119,11 @@ jobs:
             echo "COLOR=${{ env.COLOR_PR_REOPENED }}" >> $GITHUB_ENV
             
           elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "synchronize" ]]; then
-          # Details for new commits pushed to PR
-          COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
-          COMMIT_SHA_SHORT="${{github.event.after}}"
+          # Debug - write SHA directly to see if it's available
+          echo "DEBUG - SHA: ${{ github.event.pull_request.head.sha }}" >> /tmp/debug.log
           
-          SYNC_DETAILS="*Updated by:* ${{ github.event.sender.login }}\n*Update time:* $(date "+%Y-%m-%d %H:%M:%S UTC")\n*Latest commit:* \`${COMMIT_SHA}\`\n*Latest commit 2:* \`${COMMIT_SHA_SHORT}\`"
-          
-          # Add the commit message from previous step
-          if [[ -n "${{ env.COMMIT_MESSAGE }}" ]]; then
-            # Truncate commit message to 150 chars
-            COMMIT_MSG="${{ env.COMMIT_MESSAGE }}"
-            TRUNCATED_COMMIT_MSG="${COMMIT_MSG:0:150}${COMMIT_MSG:150:+...}"
-            SYNC_DETAILS="${SYNC_DETAILS}\n*Commit message:* ${TRUNCATED_COMMIT_MSG}"
-          fi
-          
-          echo "MESSAGE=🔵 *PR updated with new commits by ${{ github.event.sender.login }}*\n\n${PR_DETAILS}\n\n${SYNC_DETAILS}" >> $GITHUB_ENV
+          # Simplified approach - just include the SHA directly
+          echo "MESSAGE=🔵 *PR updated with new commits by ${{ github.event.sender.login }}*\n\n${PR_DETAILS}\n\n*Commit SHA:* \`${{ github.event.pull_request.head.sha }}\`\n*Commit message:* ${{ env.COMMIT_MESSAGE }}" >> $GITHUB_ENV
           echo "COLOR=${{ env.COLOR_PR_SYNCHRONIZED }}" >> $GITHUB_ENV
 
           elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "edited" ]]; then
@@ -149,29 +139,17 @@ jobs:
             echo "MESSAGE=📝 *PR edited by ${{ github.event.sender.login }}*\n\n${PR_DETAILS}\n\n${EDIT_DETAILS}" >> $GITHUB_ENV
             echo "COLOR=${{ env.COLOR_UNKNOWN }}" >> $GITHUB_ENV
 
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "labeled" ]]; then
-            # Details for added label
-            LABEL_DETAILS="*Label added:* ${{ github.event.label.name }}\n*Added by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
-            echo "MESSAGE=🏷️ *Label added to PR by ${{ github.event.sender.login }}*\n\n${PR_DETAILS}\n\n${LABEL_DETAILS}" >> $GITHUB_ENV
+          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "converted_to_draft" ]]; then
+            # Details for draft conversion
+            DRAFT_DETAILS="*Converted by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
+            echo "MESSAGE=📝 *PR converted to draft by ${{ github.event.sender.login }}*\n\n${PR_DETAILS}\n\n${DRAFT_DETAILS}" >> $GITHUB_ENV
             echo "COLOR=${{ env.COLOR_UNKNOWN }}" >> $GITHUB_ENV
 
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "unlabeled" ]]; then
-            # Details for removed label
-            LABEL_DETAILS="*Label removed:* ${{ github.event.label.name }}\n*Removed by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
-            echo "MESSAGE=🏷️ *Label removed from PR by ${{ github.event.sender.login }}*\n\n${PR_DETAILS}\n\n${LABEL_DETAILS}" >> $GITHUB_ENV
-            echo "COLOR=${{ env.COLOR_UNKNOWN }}" >> $GITHUB_ENV
-
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "assigned" ]]; then
-            # Details for assignment
-            ASSIGN_DETAILS="*Assignee:* ${{ github.event.assignee.login }}\n*Assigned by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
-            echo "MESSAGE=👤 *PR assigned to ${{ github.event.assignee.login }} by ${{ github.event.sender.login }}*\n\n${PR_DETAILS}\n\n${ASSIGN_DETAILS}" >> $GITHUB_ENV
-            echo "COLOR=${{ env.COLOR_UNKNOWN }}" >> $GITHUB_ENV
-
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "unassigned" ]]; then
-            # Details for unassignment
-            UNASSIGN_DETAILS="*Removed assignee:* ${{ github.event.assignee.login }}\n*Removed by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
-            echo "MESSAGE=👤 *PR unassigned from ${{ github.event.assignee.login }} by ${{ github.event.sender.login }}*\n\n${PR_DETAILS}\n\n${UNASSIGN_DETAILS}" >> $GITHUB_ENV
-            echo "COLOR=${{ env.COLOR_UNKNOWN }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "ready_for_review" ]]; then
+            # Details for ready for review
+            READY_DETAILS="*Marked ready by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
+            echo "MESSAGE=✅ *PR marked ready for review by ${{ github.event.sender.login }}*\n\n${PR_DETAILS}\n\n${READY_DETAILS}" >> $GITHUB_ENV
+            echo "COLOR=${{ env.COLOR_PR_OPENED }}" >> $GITHUB_ENV
 
           elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "review_requested" ]]; then
             # Details for review request
@@ -184,18 +162,6 @@ jobs:
             REVIEW_DETAILS="*Reviewer:* ${REVIEWER}\n*Requested by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
             echo "MESSAGE=👀 *Review requested from ${REVIEWER} by ${{ github.event.sender.login }}*\n\n${PR_DETAILS}\n\n${REVIEW_DETAILS}" >> $GITHUB_ENV
             echo "COLOR=${{ env.COLOR_PR_REVIEW }}" >> $GITHUB_ENV
-
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "converted_to_draft" ]]; then
-            # Details for draft conversion
-            DRAFT_DETAILS="*Converted by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
-            echo "MESSAGE=📝 *PR converted to draft by ${{ github.event.sender.login }}*\n\n${PR_DETAILS}\n\n${DRAFT_DETAILS}" >> $GITHUB_ENV
-            echo "COLOR=${{ env.COLOR_UNKNOWN }}" >> $GITHUB_ENV
-
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "ready_for_review" ]]; then
-            # Details for ready for review
-            READY_DETAILS="*Marked ready by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
-            echo "MESSAGE=✅ *PR marked ready for review by ${{ github.event.sender.login }}*\n\n${PR_DETAILS}\n\n${READY_DETAILS}" >> $GITHUB_ENV
-            echo "COLOR=${{ env.COLOR_PR_OPENED }}" >> $GITHUB_ENV
 
           elif [[ "${{ github.event_name }}" == "pull_request_review" && "${{ github.event.action }}" == "submitted" ]]; then
             # Details for PR review
@@ -241,6 +207,50 @@ jobs:
             
             echo "MESSAGE=💬 *PR comment ${VERB} by ${{ github.event.comment.user.login }}*\n\n${PR_DETAILS}\n\n${COMMENT_DETAILS}" >> $GITHUB_ENV
             echo "COLOR=${{ env.COLOR_PR_COMMENT }}" >> $GITHUB_ENV
+
+          elif [[ "${{ github.event_name }}" == "discussion" || "${{ github.event_name }}" == "discussion_comment" ]]; then
+            # Handle Discussion events
+            DISCUSSION_TITLE="${{ github.event.discussion.title }}"
+            DISCUSSION_URL="${{ github.event.discussion.html_url }}"
+            DISCUSSION_NUMBER="${{ github.event.discussion.number }}"
+            
+            DISCUSSION_DETAILS="*Title:* ${DISCUSSION_TITLE}\n*URL:* ${DISCUSSION_URL}\n*Author:* ${{ github.event.discussion.user.login }}"
+            
+            DISCUSSION_ACTION="${{ github.event.action }}"
+            ACTION_ICON="💬"
+            if [[ "${DISCUSSION_ACTION}" == "created" ]]; then
+              ACTION_ICON="🆕"
+            elif [[ "${DISCUSSION_ACTION}" == "answered" ]]; then
+              ACTION_ICON="✅"
+            elif [[ "${DISCUSSION_ACTION}" == "unanswered" ]]; then
+              ACTION_ICON="❓"
+            fi
+            
+            # For comment events
+            if [[ "${{ github.event_name }}" == "discussion_comment" ]]; then
+              COMMENT="${{ github.event.comment.body }}"
+              TRUNCATED_COMMENT="${COMMENT:0:150}${COMMENT:150:+...}"
+              
+              COMMENT_VERB="added"
+              if [[ "${{ github.event.action }}" == "edited" ]]; then
+                COMMENT_VERB="edited"
+              elif [[ "${{ github.event.action }}" == "deleted" ]]; then
+                COMMENT_VERB="deleted"
+              fi
+              
+              DISCUSSION_DETAILS="${DISCUSSION_DETAILS}\n*Comment ${COMMENT_VERB} by:* ${{ github.event.comment.user.login }}\n*Time:* $(date -d "${{ github.event.comment.created_at }}" "+%Y-%m-%d %H:%M:%S UTC")"
+              
+              if [[ "${{ github.event.action }}" != "deleted" ]]; then
+                DISCUSSION_DETAILS="${DISCUSSION_DETAILS}\n*Comment:* ${TRUNCATED_COMMENT}"
+              fi
+              
+              echo "MESSAGE=${ACTION_ICON} *Discussion comment ${COMMENT_VERB}*\n\n${DISCUSSION_DETAILS}" >> $GITHUB_ENV
+            else
+              echo "MESSAGE=${ACTION_ICON} *Discussion ${DISCUSSION_ACTION}*\n\n${DISCUSSION_DETAILS}" >> $GITHUB_ENV
+            fi
+            
+            echo "COLOR=${{ env.COLOR_UNKNOWN }}" >> $GITHUB_ENV
+            
           else
             # Unknown events
             echo "MESSAGE=⚪ *${{ github.event.action }} event on PR*\n\n${PR_DETAILS}" >> $GITHUB_ENV
@@ -255,6 +265,16 @@ jobs:
         id: create-payload
         run: |
           mkdir -p ./tmp
+          
+          # Determine title and title_link based on event type
+          if [[ "${{ github.event_name }}" == "discussion" || "${{ github.event_name }}" == "discussion_comment" ]]; then
+            TITLE="${{ github.event.discussion.title }} #${{ github.event.discussion.number }}"
+            TITLE_LINK="${{ github.event.discussion.html_url }}"
+          else
+            TITLE="${{ github.event.pull_request.title }} #${{ github.event.pull_request.number }}"
+            TITLE_LINK="${{ github.event.pull_request.html_url }}"
+          fi
+          
           cat > ./tmp/payload.json << EOF
           {
             "channel": "${{ env.SLACK_CHANNEL }}",
@@ -262,8 +282,8 @@ jobs:
               {
                 "color": "${{ env.COLOR }}",
                 "pretext": "*${{ github.repository }}*",
-                "title": "${{ github.event.pull_request.title }} #${{ github.event.pull_request.number }}",
-                "title_link": "${{ github.event.pull_request.html_url }}",
+                "title": "${TITLE}",
+                "title_link": "${TITLE_LINK}",
                 "text": "${{ env.MESSAGE }}",
                 "footer": "GitHub Actions",
                 "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",

@@ -50,6 +50,9 @@ env:
   COLOR_PR_REVIEW: "#007bff"
   COLOR_PR_COMMENT: "#28a745"
   COLOR_UNKNOWN: "#ffc107"
+  
+  # Add an API endpoint for the Slack messages API
+  SLACK_API_URL: "https://slack.com/api/chat.postMessage"
 
 jobs:
   notify:
@@ -57,13 +60,6 @@ jobs:
       name: Production
     runs-on: ubuntu-latest
     steps:
-      # Checkout code to access thread storage
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          # Only need a shallow clone
-          fetch-depth: 1
-      
       # For synchronize events, fetch the latest commit message using GitHub API
       - name: Get commit message for synchronize event
         if: github.event_name == 'pull_request' && github.event.action == 'synchronize'
@@ -91,28 +87,41 @@ jobs:
           # For debugging
           echo "Retrieved commit message for SHA: ${HEAD_SHA}"
 
-      # Check for thread timestamp in repo
-      - name: Check for existing thread timestamp
-        id: check-timestamp
-        if: github.event_name == 'pull_request' || github.event_name == 'pull_request_review' || github.event_name == 'pull_request_review_comment'
+      # Query Slack to check for existing messages
+      - name: Check for existing Slack messages
+        if: github.event_name == 'pull_request' && github.event.action != 'opened'
+        id: check-slack-messages
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         run: |
-          # Create directory for thread timestamps if it doesn't exist
-          mkdir -p .github/thread_timestamps
-          
-          # Get PR number
+          # Format a search query to find messages about this PR
           PR_NUMBER="${{ github.event.pull_request.number }}"
+          REPO_NAME="${{ github.repository }}"
+          SEARCH_QUERY="in:${SLACK_CHANNEL} \"${REPO_NAME}\" \"#${PR_NUMBER}\""
           
-          # Check if thread timestamp file exists
-          TIMESTAMP_FILE=".github/thread_timestamps/pr_${PR_NUMBER}.ts"
+          echo "Searching for existing messages with query: $SEARCH_QUERY"
           
-          if [ -f "$TIMESTAMP_FILE" ]; then
-            # Read timestamp from file
-            THREAD_TS=$(cat "$TIMESTAMP_FILE")
+          # Search for messages
+          SEARCH_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            --data-urlencode "query=$SEARCH_QUERY" \
+            --data-urlencode "sort=timestamp" \
+            --data-urlencode "sort_dir=desc" \
+            --data-urlencode "count=1" \
+            "https://slack.com/api/search.messages")
+          
+          # Check if we found a message
+          TOTAL_MATCHES=$(echo $SEARCH_RESPONSE | jq -r '.messages.total')
+          
+          if [ "$TOTAL_MATCHES" -gt 0 ]; then
+            # Get the timestamp of the first message (should be the original PR notification)
+            THREAD_TS=$(echo $SEARCH_RESPONSE | jq -r '.messages.matches[0].ts')
+            echo "Found existing message with timestamp: $THREAD_TS"
             echo "THREAD_TS=$THREAD_TS" >> $GITHUB_ENV
             echo "IS_THREADED_REPLY=true" >> $GITHUB_ENV
-            echo "Thread timestamp found: $THREAD_TS"
           else
-            echo "No thread timestamp found for PR #${PR_NUMBER}"
+            echo "No existing messages found for this PR"
             echo "IS_THREADED_REPLY=false" >> $GITHUB_ENV
           fi
 
@@ -151,11 +160,8 @@ jobs:
             echo "COLOR=${{ env.COLOR_PR_REOPENED }}" >> $GITHUB_ENV
             
           elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "synchronize" ]]; then
-            # Debug - write SHA directly to see if it's available
-            echo "DEBUG - SHA: ${{ github.event.pull_request.head.sha }}" >> /tmp/debug.log
-            
-            # Simplified approach - just include the SHA directly
-            echo "MESSAGE=🔵 *PR updated with new commits by ${{ github.event.sender.login }}*\n\nTitle: ${{ github.event.pull_request.title }}\n\n*Commit SHA:* \`${{ github.event.pull_request.head.sha }}\`\n*Commit message:* ${{ env.COMMIT_MESSAGE }}" >> $GITHUB_ENV
+            # For synchronize events, just include a simpler message for threaded replies
+            echo "MESSAGE=🔵 *New commits pushed by ${{ github.event.sender.login }}*\n\n*Commit SHA:* \`${{ github.event.pull_request.head.sha }}\`\n*Commit message:* ${{ env.COMMIT_MESSAGE }}" >> $GITHUB_ENV
             echo "COLOR=${{ env.COLOR_PR_SYNCHRONIZED }}" >> $GITHUB_ENV
 
           elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "edited" ]]; then
@@ -292,80 +298,41 @@ jobs:
           # Set current Unix timestamp for the message
           echo "TIMESTAMP=$(date +%s)" >> $GITHUB_ENV
 
-      # Create payload file with simpler expressions
-      - name: Create payload file
-        id: create-payload
+      # Send to Slack with thread_ts when it's a reply
+      - name: Set Slack title and link environment variables
         run: |
-          mkdir -p ./tmp
-          
-          # Determine title and title_link based on event type
           if [[ "${{ github.event_name }}" == "discussion" || "${{ github.event_name }}" == "discussion_comment" ]]; then
-            TITLE="${{ github.event.discussion.title }} #${{ github.event.discussion.number }}"
-            TITLE_LINK="${{ github.event.discussion.html_url }}"
+            echo "TITLE=${{ github.event.discussion.title }}" >> $GITHUB_ENV
+            echo "NUMBER=${{ github.event.discussion.number }}" >> $GITHUB_ENV
+            echo "TITLE_LINK=${{ github.event.discussion.html_url }}" >> $GITHUB_ENV
           else
-            TITLE="${{ github.event.pull_request.title }} #${{ github.event.pull_request.number }}"
-            TITLE_LINK="${{ github.event.pull_request.html_url }}"
+            echo "TITLE=${{ github.event.pull_request.title }}" >> $GITHUB_ENV
+            echo "NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+            echo "TITLE_LINK=${{ github.event.pull_request.html_url }}" >> $GITHUB_ENV
           fi
-          
-          # Basic payload structure
-          PAYLOAD="{
-            \"channel\": \"${{ env.SLACK_CHANNEL }}\",
-            \"attachments\": [
-              {
-                \"color\": \"${{ env.COLOR }}\",
-                \"pretext\": \"*${{ github.repository }}*\",
-                \"title\": \"${TITLE}\",
-                \"title_link\": \"${TITLE_LINK}\",
-                \"text\": \"${{ env.MESSAGE }}\",
-                \"footer\": \"GitHub Actions\",
-                \"footer_icon\": \"https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png\",
-                \"mrkdwn_in\": [\"text\", \"pretext\"],
-                \"ts\": \"${{ env.TIMESTAMP }}\"
-              }
-            ]"
-          
-          # If this is a threaded reply, add the thread_ts parameter
-          if [[ "${{ env.IS_THREADED_REPLY }}" == "true" ]]; then
-            PAYLOAD="${PAYLOAD},
-            \"thread_ts\": \"${{ env.THREAD_TS }}\""
-          fi
-          
-          # Close the JSON object
-          PAYLOAD="${PAYLOAD}
-          }"
-          
-          echo "$PAYLOAD" > ./tmp/payload.json
 
-      - name: Send to Slack
-        id: send-slack
+      - name: Send Slack notification
         uses: slackapi/slack-github-action@v2.0.0
         with:
-          payload-file-path: ./tmp/payload.json
-          payload-templated: true
+          # Use different payloads based on whether this is a threaded reply
+          payload: |
+            {
+              "channel": "${{ env.SLACK_CHANNEL }}",
+              "attachments": [
+                {
+                  "color": "${{ env.COLOR }}",
+                  "pretext": "*${{ github.repository }}*",
+                  "title": "${{ github.event_name == 'discussion' || github.event_name == 'discussion_comment' && github.event.discussion.title || github.event.pull_request.title }} #${{ github.event_name == 'discussion' || github.event_name == 'discussion_comment' && github.event.discussion.number || github.event.pull_request.number }}",
+                  "title_link": "${{ github.event_name == 'discussion' || github.event_name == 'discussion_comment' && github.event.discussion.html_url || github.event.pull_request.html_url }}",
+                  "text": "${{ env.MESSAGE }}",
+                  "footer": "GitHub Actions",
+                  "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+                  "mrkdwn_in": ["text", "pretext"],
+                  "ts": "${{ env.TIMESTAMP }}"
+                }
+              ]
+              ${{ env.IS_THREADED_REPLY == 'true' && format(',
+              "thread_ts": "{0}"', env.THREAD_TS) || '' }}
+            }
           webhook: ${{ secrets.SLACK_INCOMING_WEBHOOK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
-          errors: true
-
-      # Store the thread timestamp for future replies
-      - name: Store thread timestamp for PR
-        if: github.event_name == 'pull_request' && github.event.action == 'opened'
-        run: |
-          # Extract message timestamp from Slack response
-          # The slack-github-action puts the raw response in STDOUT
-          # We need to extract the "ts" field from the JSON response
-          SLACK_RESPONSE="${{ steps.send-slack.outputs.response }}"
-          THREAD_TS=$(echo $SLACK_RESPONSE | jq -r '.ts')
-          
-          # Ensure directory exists
-          mkdir -p .github/thread_timestamps
-          
-          # Store timestamp in a file named after the PR number
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          echo "$THREAD_TS" > .github/thread_timestamps/pr_${PR_NUMBER}.ts
-          
-          # Commit and push the timestamp file
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          git add .github/thread_timestamps/pr_${PR_NUMBER}.ts
-          git commit -m "Store thread timestamp for PR #${PR_NUMBER}" || echo "No changes to commit"
-          git push

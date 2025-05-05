@@ -120,11 +120,10 @@ jobs:
             
           elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "synchronize" ]]; then
           # Details for new commits pushed to PR
-          # Get the short commit SHA (first 7 characters)
           COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
-          SHORT_SHA="${COMMIT_SHA:0:7}"
+          COMMIT_SHA_SHORT="${{github.event.after}}"
           
-          SYNC_DETAILS="*Updated by:* ${{ github.event.sender.login }}\n*Update time:* $(date "+%Y-%m-%d %H:%M:%S UTC")\n*Latest commit:* \`${SHORT_SHA}\`"
+          SYNC_DETAILS="*Updated by:* ${{ github.event.sender.login }}\n*Update time:* $(date "+%Y-%m-%d %H:%M:%S UTC")\n*Latest commit:* \`${COMMIT_SHA}\`\n*Latest commit 2:* \`${COMMIT_SHA_SHORT}\`"
           
           # Add the commit message from previous step
           if [[ -n "${{ env.COMMIT_MESSAGE }}" ]]; then

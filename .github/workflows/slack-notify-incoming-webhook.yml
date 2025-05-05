@@ -84,6 +84,28 @@ jobs:
           # For debugging
           echo "Retrieved commit message for SHA: ${HEAD_SHA}"
 
+      # Check if there's a stored timestamp for this PR
+      - name: Check for existing thread timestamp
+        id: check-timestamp
+        if: github.event_name == 'pull_request' || github.event_name == 'pull_request_review' || github.event_name == 'pull_request_review_comment'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Get PR number
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          
+          # Check if thread timestamp exists in repo variables
+          THREAD_TS=$(gh api repos/${{ github.repository }}/actions/variables/PR_${PR_NUMBER}_THREAD_TS 2>/dev/null | jq -r '.value' 2>/dev/null || echo "")
+          
+          if [[ -n "$THREAD_TS" && "$THREAD_TS" != "null" ]]; then
+            echo "THREAD_TS=$THREAD_TS" >> $GITHUB_ENV
+            echo "Thread timestamp found: $THREAD_TS"
+            echo "IS_THREADED_REPLY=true" >> $GITHUB_ENV
+          else
+            echo "No thread timestamp found"
+            echo "IS_THREADED_REPLY=false" >> $GITHUB_ENV
+          fi
+
       - name: Set event message
         id: event-message
         run: |
@@ -119,12 +141,12 @@ jobs:
             echo "COLOR=${{ env.COLOR_PR_REOPENED }}" >> $GITHUB_ENV
             
           elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "synchronize" ]]; then
-          # Debug - write SHA directly to see if it's available
-          echo "DEBUG - SHA: ${{ github.event.pull_request.head.sha }}" >> /tmp/debug.log
-          
-          # Simplified approach - just include the SHA directly
-          echo "MESSAGE=🔵 *PR updated with new commits by ${{ github.event.sender.login }}*\n\n${PR_DETAILS}\n\n*Commit SHA:* \`${{ github.event.pull_request.head.sha }}\`\n*Commit message:* ${{ env.COMMIT_MESSAGE }}" >> $GITHUB_ENV
-          echo "COLOR=${{ env.COLOR_PR_SYNCHRONIZED }}" >> $GITHUB_ENV
+            # Debug - write SHA directly to see if it's available
+            echo "DEBUG - SHA: ${{ github.event.pull_request.head.sha }}" >> /tmp/debug.log
+            
+            # Simplified approach - just include the SHA directly
+            echo "MESSAGE=🔵 *PR updated with new commits by ${{ github.event.sender.login }}*\n\nTitle: ${{ github.event.pull_request.title }}\n\n*Commit SHA:* \`${{ github.event.pull_request.head.sha }}\`\n*Commit message:* ${{ env.COMMIT_MESSAGE }}" >> $GITHUB_ENV
+            echo "COLOR=${{ env.COLOR_PR_SYNCHRONIZED }}" >> $GITHUB_ENV
 
           elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "edited" ]]; then
             # Details for edited PR
@@ -275,26 +297,37 @@ jobs:
             TITLE_LINK="${{ github.event.pull_request.html_url }}"
           fi
           
-          cat > ./tmp/payload.json << EOF
-          {
-            "channel": "${{ env.SLACK_CHANNEL }}",
-            "attachments": [
+          # Basic payload structure
+          PAYLOAD="{
+            \"channel\": \"${{ env.SLACK_CHANNEL }}\",
+            \"attachments\": [
               {
-                "color": "${{ env.COLOR }}",
-                "pretext": "*${{ github.repository }}*",
-                "title": "${TITLE}",
-                "title_link": "${TITLE_LINK}",
-                "text": "${{ env.MESSAGE }}",
-                "footer": "GitHub Actions",
-                "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
-                "mrkdwn_in": ["text", "pretext"],
-                "ts": "${{ env.TIMESTAMP }}"
+                \"color\": \"${{ env.COLOR }}\",
+                \"pretext\": \"*${{ github.repository }}*\",
+                \"title\": \"${TITLE}\",
+                \"title_link\": \"${TITLE_LINK}\",
+                \"text\": \"${{ env.MESSAGE }}\",
+                \"footer\": \"GitHub Actions\",
+                \"footer_icon\": \"https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png\",
+                \"mrkdwn_in\": [\"text\", \"pretext\"],
+                \"ts\": \"${{ env.TIMESTAMP }}\"
               }
-            ]
-          }
-          EOF
+            ]"
+          
+          # If this is a threaded reply, add the thread_ts parameter
+          if [[ "${{ env.IS_THREADED_REPLY }}" == "true" ]]; then
+            PAYLOAD="${PAYLOAD},
+            \"thread_ts\": \"${{ env.THREAD_TS }}\""
+          fi
+          
+          # Close the JSON object
+          PAYLOAD="${PAYLOAD}
+          }"
+          
+          echo "$PAYLOAD" > ./tmp/payload.json
 
       - name: Send to Slack
+        id: send-slack
         uses: slackapi/slack-github-action@v2.0.0
         with:
           payload-file-path: ./tmp/payload.json
@@ -302,3 +335,35 @@ jobs:
           webhook: ${{ secrets.SLACK_INCOMING_WEBHOOK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
           errors: true
+
+      # Store the timestamp for future threading if this is a new PR
+      - name: Store thread timestamp for future events
+        if: github.event_name == 'pull_request' && github.event.action == 'opened'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Extract PR number and response from Slack
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          
+          # The Slack API returns the timestamp of the message in the response
+          # Note: We need to extract this from the JSON response
+          # For this example, let's assume we're parsing it from stdout of the previous step
+          # In reality, you might need to adjust how you extract this based on the actual response format
+          
+          # Create or update repository variable to store thread timestamp
+          # Using GitHub API to create/update a repository variable
+          # First check if variable exists
+          VAR_EXISTS=$(gh api repos/${{ github.repository }}/actions/variables/PR_${PR_NUMBER}_THREAD_TS --silent || echo "false")
+          
+          if [[ "$VAR_EXISTS" == "false" ]]; then
+            # Create variable
+            echo "Creating new variable for PR thread timestamp"
+            gh api --method POST repos/${{ github.repository }}/actions/variables \
+              -f name="PR_${PR_NUMBER}_THREAD_TS" \
+              -f value="${{ steps.send-slack.outputs.response }}"
+          else
+            # Update variable
+            echo "Updating existing variable for PR thread timestamp"
+            gh api --method PATCH repos/${{ github.repository }}/actions/variables/PR_${PR_NUMBER}_THREAD_TS \
+              -f value="${{ steps.send-slack.outputs.response }}"
+          fi

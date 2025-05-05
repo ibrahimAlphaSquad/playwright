@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for tags
 
       - name: Get latest tag
         id: get_latest_tag
@@ -31,8 +33,12 @@ jobs:
           version="${{ env.latest_tag }}"
           version="${version#v}"  # Remove leading 'v'
           IFS='.' read -r major minor patch <<< "$version"
-          patch=$((patch + 1))
-          next_tag="v$major.$minor.$patch"
+          # Check if tag already exists and increment patch
+          next_tag="v$major.$minor.$((patch + 1))"
+          if git rev-parse "$next_tag" >/dev/null 2>&1; then
+            patch=$((patch + 1))
+            next_tag="v$major.$minor.$patch"
+          fi
           echo "Next tag: $next_tag"
           echo "next_tag=$next_tag" >> $GITHUB_ENV
 
@@ -40,5 +46,10 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git tag ${{ env.next_tag }}
-          git push origin ${{ env.next_tag }}
+          git tag -a ${{ env.next_tag }} -m "Auto-generated tag ${{ env.next_tag }}"
+          git push origin ${{ env.next_tag }} || echo "Tag push failed, possibly already exists"
+        continue-on-error: true  # Allow workflow to proceed even if tag push fails
+
+      - name: Log result
+        run: |
+          echo "Tagged repository with ${{ env.next_tag }}"

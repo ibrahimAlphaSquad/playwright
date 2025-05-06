@@ -97,6 +97,23 @@ jobs:
           # For debugging
           echo "Retrieved commit message for SHA: ${HEAD_SHA}"
 
+      # Create a unique thread identifier for the PR
+      - name: Create PR thread identifier
+        id: create-thread-id
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "pull_request_review" || "${{ github.event_name }}" == "pull_request_review_comment" ]]; then
+            # Create a consistent thread ID based on repository and PR number
+            # This ensures all messages about the same PR use the same thread
+            THREAD_KEY="${{ github.repository }}-pr-${{ github.event.pull_request.number }}"
+            echo "THREAD_KEY=${THREAD_KEY}" >> $GITHUB_ENV
+            echo "Created thread key: ${THREAD_KEY}"
+          elif [[ "${{ github.event_name }}" == "discussion" || "${{ github.event_name }}" == "discussion_comment" ]]; then
+            # Similarly for discussions
+            THREAD_KEY="${{ github.repository }}-discussion-${{ github.event.discussion.number }}"
+            echo "THREAD_KEY=${THREAD_KEY}" >> $GITHUB_ENV
+            echo "Created thread key: ${THREAD_KEY}"
+          fi
+
       # Query Slack to check for existing messages
       - name: Check for existing Slack messages
         if: github.event_name == 'pull_request' && github.event.action != 'opened'
@@ -104,10 +121,10 @@ jobs:
         env:
           SLACK_USER_OAUTH_TOKEN: ${{ secrets.SLACK_USER_OAUTH_TOKEN }}
         run: |
-          # Format a search query to find messages about this PR
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          REPO_NAME="${{ github.repository }}"
-          SEARCH_QUERY="in:${SLACK_CHANNEL} \"${REPO_NAME}\" \"#${PR_NUMBER}\""
+          # Format a search query to find messages about this PR using the thread key
+          # This query is more specific to find the thread
+          THREAD_KEY="${{ env.THREAD_KEY }}"
+          SEARCH_QUERY="in:${SLACK_CHANNEL} \"${THREAD_KEY}\""
           
           echo "Searching for existing messages with query: $SEARCH_QUERY"
           
@@ -117,7 +134,7 @@ jobs:
             --data-urlencode "token=$SLACK_USER_OAUTH_TOKEN" \
             --data-urlencode "query=$SEARCH_QUERY" \
             --data-urlencode "sort=timestamp" \
-            --data-urlencode "sort_dir=desc" \
+            --data-urlencode "sort_dir=asc" \
             --data-urlencode "count=1" \
             "https://slack.com/api/search.messages")
           
@@ -376,9 +393,9 @@ jobs:
                   "title": "${{ env.TITLE }} #${{ env.NUMBER }}",
                   "title_link": "${{ env.TITLE_LINK }}",
                   "text": "${{ env.MESSAGE }}",
-                  "footer": "GitHub Actions",
+                  "footer": "GitHub Actions • Thread-Key: ${{ env.THREAD_KEY }}",
                   "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
-                  "mrkdwn_in": ["text", "pretext"],
+                  "mrkdwn_in": ["text", "pretext", "footer"],
                   "ts": "${{ env.TIMESTAMP }}"
                 }
               ]

@@ -262,12 +262,17 @@ jobs:
             echo "COLOR=${{ env.COLOR_PR_REVIEW }}" >> $GITHUB_ENV
 
           elif [[ "${{ github.event_name }}" == "pull_request_review_comment" ]]; then
-            # Details for PR review comment
-            # For comments, truncate them to a reasonable length
+            # Details for PR review comment - FIXED to avoid bad substitution error
             COMMENT="${{ github.event.comment.body }}"
             TRUNCATED_COMMENT="${COMMENT:0:150}${COMMENT:150:+...}"
             
-            COMMENT_DETAILS="*Commenter:* ${{ github.event.comment.user.login }}\n*Time:* $(date -d "${{ github.event.comment.created_at }}" "+%Y-%m-%d %H:%M:%S UTC")\n*Path:* ${{ github.event.comment.path }}${github.event.comment.line:+:${{ github.event.comment.line }}}"
+            # Fix for the bad substitution error by using an if statement instead of parameter expansion
+            PATH_WITH_LINE="${{ github.event.comment.path }}"
+            if [[ -n "${{ github.event.comment.line }}" ]]; then
+              PATH_WITH_LINE="${{ github.event.comment.path }}:${{ github.event.comment.line }}"
+            fi
+            
+            COMMENT_DETAILS="*Commenter:* ${{ github.event.comment.user.login }}\n*Time:* $(date -d "${{ github.event.comment.created_at }}" "+%Y-%m-%d %H:%M:%S UTC")\n*Path:* ${PATH_WITH_LINE}"
             
             VERB="DROPPED"
             PREFIX="*NEW COMMENT JUST DROPPED*"

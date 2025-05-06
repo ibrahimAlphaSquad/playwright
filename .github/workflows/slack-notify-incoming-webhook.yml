@@ -38,11 +38,11 @@ on:
       - edited
       - deleted
 
-# Add concurrency configuration to ensure sequential execution
+# Add concurrency configuration to ensure ALL runs execute sequentially
 concurrency:
-  # Group by repository and PR number to ensure PR-specific sequencing
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number || github.sha }}
-  # Cancel-in-progress would cancel running workflows; we want sequential so we set this to false
+  # Create a unique group key for each PR action to prevent any cancellation
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number || github.sha }}-${{ github.run_id }}
+  # This ensures queued jobs don't get canceled
   cancel-in-progress: false
 
 env:

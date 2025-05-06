@@ -6,13 +6,11 @@ on:
       - closed
       - reopened
       - synchronize
-      # - locked
-      # - unlocked
       - edited 
-      # - assigned
-      # - unassigned
-      # - labeled
-      # - unlabeled
+      - assigned
+      - unassigned
+      - labeled
+      - unlabeled
       - converted_to_draft
       - ready_for_review
       - review_requested

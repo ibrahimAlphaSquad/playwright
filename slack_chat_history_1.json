@@ -1,0 +1,59 @@
+{
+  "ok": true,
+  "query": "in:alpha-pr-review \"ibrahimAlphaSquad/playwright\" \"#32\"",
+  "messages": {
+    "total": 1,
+    "pagination": {
+      "total_count": 1,
+      "page": 1,
+      "per_page": 20,
+      "page_count": 1,
+      "first": 1,
+      "last": 1
+    },
+    "paging": { "count": 20, "total": 1, "page": 1, "pages": 1 },
+    "matches": [
+      {
+        "iid": "da64b758-35ab-4ae1-8dae-cf0c8f7321d2",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": null,
+        "username": "github watcher",
+        "ts": "1746476706.727819",
+        "attachments": [
+          {
+            "id": 1,
+            "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "ts": 1746476706,
+            "color": "28a745",
+            "fallback": "1231 #32",
+            "text": ":large_green_circle: *New PR opened by ibrahimAlphaSquad*\n\n*Title:* 1231\n*Branch:* slack-notifications-test \u2192 main\n*Author:* ibrahimAlphaSquad\n*Created:* 2025-05-05 20:24:57 UTC\n\n*Description:*",
+            "pretext": "*ibrahimAlphaSquad/playwright*",
+            "title": "1231 #32",
+            "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/32",
+            "footer": "GitHub Actions",
+            "mrkdwn_in": ["pretext", "text"]
+          }
+        ],
+        "text": "",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746476706727819",
+        "no_reactions": true
+      }
+    ]
+  }
+}

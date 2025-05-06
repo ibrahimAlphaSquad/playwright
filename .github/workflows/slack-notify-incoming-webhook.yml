@@ -385,5 +385,5 @@ jobs:
               ${{ env.IS_THREADED_REPLY == 'true' && format(',
               "thread_ts": "{0}"', env.THREAD_TS) || '' }}
             }
-          webhook: ${{ secrets.SLACK_INCOMING_WEBHOOK_WEBHOOK_URL }}
+          webhook: ${{ secrets.SLACK_INCOMING_WEBHOOK_URL }}
           webhook-type: incoming-webhook

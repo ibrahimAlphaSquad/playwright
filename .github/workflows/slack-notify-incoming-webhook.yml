@@ -48,7 +48,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  SLACK_CHANNEL: mt-pr-review
+  SLACK_CHANNEL: alpha-pr-review
   SLACK_INCOMING_WEBHOOK_URL: ${{ secrets.SLACK_INCOMING_WEBHOOK_URL }}
   SLACK_USER_OAUTH_TOKEN: ${{ secrets.SLACK_USER_OAUTH_TOKEN }}
   # Color scheme

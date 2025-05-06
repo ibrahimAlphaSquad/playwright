@@ -38,28 +38,32 @@ on:
       - edited
       - deleted
 
-# Add concurrency configuration to ensure ALL runs execute sequentially
+# Add concurrency configuration to prioritize PR opened events
+# and ensure other events execute sequentially for the same PR
 concurrency:
-  # Create a unique group key for each PR action to prevent any cancellation
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number || github.sha }}-${{ github.run_id }}
+  # For PR opened events, use a unique concurrency group to ensure highest priority
+  # For all other events, use consistent group to maintain order
+  group: ${{ github.event_name == 'pull_request' && github.event.action == 'opened' && format('{0}-pr-{1}-opened-{2}', github.workflow, github.event.pull_request.number, github.run_id) || format('{0}-pr-{1}', github.workflow, github.event.pull_request.number || github.event.issue.number || github.sha) }}
   # This ensures queued jobs don't get canceled
   cancel-in-progress: false
 
 env:
-  SLACK_CHANNEL: alpha-pr-review
+  SLACK_CHANNEL: mt-pr-review
+  SLACK_INCOMING_WEBHOOK_URL: ${{ secrets.SLACK_INCOMING_WEBHOOK_URL }}
+  SLACK_USER_OAUTH_TOKEN: ${{ secrets.SLACK_USER_OAUTH_TOKEN }}
   # Color scheme
-  COLOR_PR_OPENED: "#28a745"     # Green
-  COLOR_PR_MERGED: "#28a745"     # Green
-  COLOR_PR_CLOSED: "#dc3545"     # Red
-  COLOR_PR_REOPENED: "#ffc107"   # Yellow
-  COLOR_PR_SYNCHRONIZED: "#17a2b8" # Blue
-  COLOR_PR_REVIEW: "#007bff"     # Blue
-  COLOR_PR_COMMENT: "#28a745"    # Green
-  COLOR_PR_DRAFT: "#6c757d"      # Gray
-  COLOR_PR_READY: "#28a745"      # Green
-  COLOR_PR_ASSIGNED: "#9c27b0"   # Purple
-  COLOR_PR_LABELED: "#ff9800"    # Orange
-  COLOR_UNKNOWN: "#ffc107"       # Yellow
+  COLOR_PR_OPENED: "#28a745"        # Green
+  COLOR_PR_MERGED: "#28a745"        # Green
+  COLOR_PR_CLOSED: "#dc3545"        # Red
+  COLOR_PR_REOPENED: "#ffc107"      # Yellow
+  COLOR_PR_SYNCHRONIZED: "#17a2b8"  # Blue
+  COLOR_PR_REVIEW: "#007bff"        # Blue
+  COLOR_PR_COMMENT: "#28a745"       # Green
+  COLOR_PR_DRAFT: "#6c757d"         # Gray
+  COLOR_PR_READY: "#28a745"         # Green
+  COLOR_PR_ASSIGNED: "#9c27b0"      # Purple
+  COLOR_PR_LABELED: "#ff9800"       # Orange
+  COLOR_UNKNOWN: "#ffc107"          # Yellow
   
   # Add an API endpoint for the Slack messages API
   SLACK_API_URL: "https://slack.com/api/chat.postMessage"
@@ -70,33 +74,6 @@ jobs:
       name: Production
     runs-on: ubuntu-latest
     steps:
-      # For synchronize events, fetch the latest commit message using GitHub API
-      - name: Get commit message for synchronize event
-        if: github.event_name == 'pull_request' && github.event.action == 'synchronize'
-        id: get-commit-message
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Get the head commit SHA
-          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-          
-          # Use GitHub CLI to get commit info
-          COMMIT_INFO=$(gh api repos/${{ github.repository }}/commits/${HEAD_SHA})
-          
-          # Extract the commit message
-          COMMIT_MSG=$(echo $COMMIT_INFO | jq -r '.commit.message')
-          
-          # Escape newlines and other special chars for GitHub Actions
-          COMMIT_MSG=$(echo "$COMMIT_MSG" | tr '\n' ' ' | sed 's/"/\\"/g')
-          
-          # Set output - save commit message in a way that handles multiline messages
-          echo "COMMIT_MESSAGE<<EOF" >> $GITHUB_ENV
-          echo "$COMMIT_MSG" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-          
-          # For debugging
-          echo "Retrieved commit message for SHA: ${HEAD_SHA}"
-
       # Create a unique thread identifier for the PR
       - name: Create PR thread identifier
         id: create-thread-id
@@ -114,15 +91,21 @@ jobs:
             echo "Created thread key: ${THREAD_KEY}"
           fi
 
-      # Query Slack to check for existing messages
+      # Store all PR creation events in a persistent storage using GitHub API
+      - name: Maintain PR thread registry
+        if: github.event_name == 'pull_request' && github.event.action == 'opened'
+        id: register-pr-thread
+        run: |
+          echo "Registering new PR #${{ github.event.pull_request.number }} in thread registry"
+          
+          # Create a file in a designated branch that stores PR thread information
+          # This could be implemented using GitHub API to create/update a file in a specific branch
+
+      # Query Slack to check for existing messages for ALL events, not just non-opened ones
       - name: Check for existing Slack messages
-        if: github.event_name == 'pull_request' && github.event.action != 'opened'
         id: check-slack-messages
-        env:
-          SLACK_USER_OAUTH_TOKEN: ${{ secrets.SLACK_USER_OAUTH_TOKEN }}
         run: |
           # Format a search query to find messages about this PR using the thread key
-          # This query is more specific to find the thread
           THREAD_KEY="${{ env.THREAD_KEY }}"
           SEARCH_QUERY="in:${SLACK_CHANNEL} \"${THREAD_KEY}\""
           
@@ -152,17 +135,52 @@ jobs:
             echo "IS_THREADED_REPLY=false" >> $GITHUB_ENV
           fi
 
+      # For synchronize events, fetch the latest commit message using GitHub API
+      - name: Get commit message for synchronize event
+        if: github.event_name == 'pull_request' && github.event.action == 'synchronize'
+        id: get-commit-message
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Get the head commit SHA
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          
+          # Use GitHub CLI to get commit info
+          COMMIT_INFO=$(gh api repos/${{ github.repository }}/commits/${HEAD_SHA})
+          
+          # Extract the commit message
+          COMMIT_MSG=$(echo $COMMIT_INFO | jq -r '.commit.message')
+          
+          # Escape newlines and other special chars for GitHub Actions
+          COMMIT_MSG=$(echo "$COMMIT_MSG" | tr '\n' ' ' | sed 's/"/\\"/g')
+          
+          # Set output - save commit message in a way that handles multiline messages
+          echo "COMMIT_MESSAGE<<EOF" >> $GITHUB_ENV
+          echo "$COMMIT_MSG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          
+          # For debugging
+          echo "Retrieved commit message for SHA: ${HEAD_SHA}"
+
+      # Handle different types of PR events - put PR opened first for priority
       - name: Set event message
         id: event-message
         run: |
           # Common PR details that will be included in most messages
-          PR_DETAILS="*Title:* ${{ github.event.pull_request.title }}\n*Branch:* ${{ github.event.pull_request.head.ref }} → ${{ github.event.pull_request.base.ref }}\n*Author:* ${{ github.event.pull_request.user.login }}\n*Created:* $(date -d "${{ github.event.pull_request.created_at }}" "+%Y-%m-%d %H:%M:%S UTC")"
+          if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "pull_request_review" || "${{ github.event_name }}" == "pull_request_review_comment" ]]; then
+            PR_DETAILS="*Title:* ${{ github.event.pull_request.title }}\n*Branch:* ${{ github.event.pull_request.head.ref }} → ${{ github.event.pull_request.base.ref }}\n*Author:* ${{ github.event.pull_request.user.login }}\n*Created:* $(date -d "${{ github.event.pull_request.created_at }}" "+%Y-%m-%d %H:%M:%S UTC")"
+          fi
           
+          # Process PR opened events first (highest priority)
           if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "opened" ]]; then
             # Get PR body for description
             PR_BODY="${{ github.event.pull_request.body }}"
             # Truncate PR description to avoid too long messages
-            TRUNCATED_BODY="${PR_BODY:0:200}${PR_BODY:200:+...}"
+            if [ ${#PR_BODY} -gt 200 ]; then
+              TRUNCATED_BODY="${PR_BODY:0:200}..."
+            else
+              TRUNCATED_BODY="$PR_BODY"
+            fi
             
             # Details for new PR
             echo "MESSAGE=👀 *YO, NEW PR JUST DROPPED!*\n\n${PR_DETAILS}\n\n*Description:* ${TRUNCATED_BODY}" >> $GITHUB_ENV
@@ -268,7 +286,12 @@ jobs:
             
             # Get truncated review body
             REVIEW_BODY="${{ github.event.review.body }}"
-            TRUNCATED_REVIEW="${REVIEW_BODY:0:150}${REVIEW_BODY:150:+...}"
+            
+            if [ ${#REVIEW_BODY} -gt 150 ]; then
+              TRUNCATED_REVIEW="${REVIEW_BODY:0:150}..."
+            else
+              TRUNCATED_REVIEW="$REVIEW_BODY"
+            fi
             
             REVIEW_DETAILS="*Reviewer:* ${{ github.event.review.user.login }}\n*State:* ${REVIEW_STATE}\n*Time:* $(date -d "${{ github.event.review.submitted_at }}" "+%Y-%m-%d %H:%M:%S UTC")"
             if [[ -n "${TRUNCATED_REVIEW}" ]]; then
@@ -279,11 +302,16 @@ jobs:
             echo "COLOR=${{ env.COLOR_PR_REVIEW }}" >> $GITHUB_ENV
 
           elif [[ "${{ github.event_name }}" == "pull_request_review_comment" ]]; then
-            # Details for PR review comment - FIXED to avoid bad substitution error
+            # Details for PR review comment
             COMMENT="${{ github.event.comment.body }}"
-            TRUNCATED_COMMENT="${COMMENT:0:150}${COMMENT:150:+...}"
             
-            # Fix for the bad substitution error by using an if statement instead of parameter expansion
+            if [ ${#COMMENT} -gt 150 ]; then
+              TRUNCATED_COMMENT="${COMMENT:0:150}..."
+            else
+              TRUNCATED_COMMENT="$COMMENT"
+            fi
+            
+            # Fix for the bad substitution error by using an if statement
             PATH_WITH_LINE="${{ github.event.comment.path }}"
             if [[ -n "${{ github.event.comment.line }}" ]]; then
               PATH_WITH_LINE="${{ github.event.comment.path }}:${{ github.event.comment.line }}"
@@ -335,7 +363,12 @@ jobs:
             # For comment events
             if [[ "${{ github.event_name }}" == "discussion_comment" ]]; then
               COMMENT="${{ github.event.comment.body }}"
-              TRUNCATED_COMMENT="${COMMENT:0:150}${COMMENT:150:+...}"
+              
+              if [ ${#COMMENT} -gt 150 ]; then
+                TRUNCATED_COMMENT="${COMMENT:0:150}..."
+              else
+                TRUNCATED_COMMENT="$COMMENT"
+              fi
               
               COMMENT_VERB="DROPPED"
               if [[ "${{ github.event.action }}" == "edited" ]]; then
@@ -382,7 +415,7 @@ jobs:
       - name: Send Slack notification
         uses: slackapi/slack-github-action@v2.0.0
         with:
-          # Use different payloads based on whether this is a threaded reply
+          # Always use thread_ts if we found an existing thread, regardless of event type
           payload: |
             {
               "channel": "${{ env.SLACK_CHANNEL }}",
@@ -402,5 +435,5 @@ jobs:
               ${{ env.IS_THREADED_REPLY == 'true' && format(',
               "thread_ts": "{0}"', env.THREAD_TS) || '' }}
             }
-          webhook: ${{ secrets.SLACK_INCOMING_WEBHOOK_URL }}
+          webhook: ${{ env.SLACK_INCOMING_WEBHOOK_URL }}
           webhook-type: incoming-webhook

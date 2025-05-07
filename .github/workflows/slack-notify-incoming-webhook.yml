@@ -42,6 +42,8 @@ on:
 env:
   # Slack configuration
   SLACK_CHANNEL: alpha-pr-review
+  SLACK_INCOMING_WEBHOOK_URL: ${{ secrets.SLACK_INCOMING_WEBHOOK_URL }}
+  SLACK_USER_OAUTH_TOKEN: ${{ secrets.SLACK_USER_OAUTH_TOKEN }}
   
   # Color scheme
   COLOR_PR_OPENED: "#28a745"     # Green
@@ -60,6 +62,9 @@ env:
   # Thread storage - Using PR comments
   THREAD_COMMENT_PREFIX: "<!-- SLACK_THREAD:"
   THREAD_COMMENT_SUFFIX: "-->"
+
+  # Add an API endpoint for the Slack messages API
+  SLACK_API_URL: "https://slack.com/api/chat.postMessage"
 
 # Split into two separate jobs to ensure PR creation goes first
 jobs:

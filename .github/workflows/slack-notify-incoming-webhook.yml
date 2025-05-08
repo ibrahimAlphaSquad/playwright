@@ -7,7 +7,7 @@ on:
       - closed
       - reopened
       - synchronize
-      - edited
+      - edited 
       - assigned
       - unassigned
       - labeled
@@ -191,7 +191,7 @@ jobs:
             echo "Created thread key: ${THREAD_KEY}"
           fi
 
-      # Query Slack to check for existing messages
+      # Query Slack to check for existing messages with retry mechanism
       - name: Check for existing Slack messages
         if: github.event_name == 'pull_request' || github.event_name == 'pull_request_review' || github.event_name == 'pull_request_review_comment'
         id: check-slack-messages
@@ -201,31 +201,66 @@ jobs:
           # Format a search query to find messages about this PR using the thread key
           # This query is more specific to find the thread
           THREAD_KEY="${{ env.THREAD_KEY }}"
-          SEARCH_QUERY="in:${SLACK_CHANNEL} \"${THREAD_KEY}\""
+          # Update the search query format to match your example
+          SEARCH_QUERY="in:${SLACK_CHANNEL} \"${THREAD_KEY}\" "
           
           echo "Searching for existing messages with query: $SEARCH_QUERY"
           
-          # Search for messages
-          SEARCH_RESPONSE=$(curl -s -X POST \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            --data-urlencode "token=$SLACK_USER_OAUTH_TOKEN" \
-            --data-urlencode "query=$SEARCH_QUERY" \
-            --data-urlencode "sort=timestamp" \
-            --data-urlencode "sort_dir=asc" \
-            --data-urlencode "count=1" \
-            "https://slack.com/api/search.messages")
+          # Initialize variables for retry mechanism
+          MAX_RETRIES=3
+          RETRY_WAIT=5  # seconds
+          ATTEMPT=1
+          THREAD_TS=""
+          FOUND_MESSAGE=false
           
-          # Check if we found a message
-          TOTAL_MATCHES=$(echo $SEARCH_RESPONSE | jq -r '.messages.total')
+          while [ $ATTEMPT -le $MAX_RETRIES ] && [ "$FOUND_MESSAGE" = "false" ]; do
+            echo "Search attempt #$ATTEMPT"
+            
+            # Search for messages
+            SEARCH_RESPONSE=$(curl -s -X POST \
+              -H "Content-Type: application/x-www-form-urlencoded" \
+              --data-urlencode "token=$SLACK_USER_OAUTH_TOKEN" \
+              --data-urlencode "query=$SEARCH_QUERY" \
+              --data-urlencode "sort=timestamp" \
+              --data-urlencode "sort_dir=desc" \
+              --data-urlencode "count=1" \
+              "https://slack.com/api/search.messages")
+            
+            # Check if the API request was successful
+            IS_OK=$(echo $SEARCH_RESPONSE | jq -r '.ok')
+            if [ "$IS_OK" != "true" ]; then
+              echo "Error in Slack API response: $(echo $SEARCH_RESPONSE | jq -r '.error')"
+              break
+            fi
+            
+            # Check if we found a message
+            TOTAL_MATCHES=$(echo $SEARCH_RESPONSE | jq -r '.messages.total')
+            
+            if [ "$TOTAL_MATCHES" -gt 0 ]; then
+              # Get the timestamp of the first message (should be the original PR notification)
+              THREAD_TS=$(echo $SEARCH_RESPONSE | jq -r '.messages.matches[0].ts')
+              echo "Found existing message with timestamp: $THREAD_TS"
+              FOUND_MESSAGE=true
+              break
+            else
+              echo "No existing messages found for this PR on attempt #$ATTEMPT"
+              
+              # If this isn't the last attempt, wait before retrying
+              if [ $ATTEMPT -lt $MAX_RETRIES ]; then
+                echo "Waiting $RETRY_WAIT seconds before retrying..."
+                sleep $RETRY_WAIT
+              fi
+              
+              ATTEMPT=$((ATTEMPT + 1))
+            fi
+          done
           
-          if [ "$TOTAL_MATCHES" -gt 0 ]; then
-            # Get the timestamp of the first message (should be the original PR notification)
-            THREAD_TS=$(echo $SEARCH_RESPONSE | jq -r '.messages.matches[0].ts')
-            echo "Found existing message with timestamp: $THREAD_TS"
+          # After retries, set the appropriate environment variables
+          if [ "$FOUND_MESSAGE" = "true" ]; then
             echo "THREAD_TS=$THREAD_TS" >> $GITHUB_ENV
             echo "IS_THREADED_REPLY=true" >> $GITHUB_ENV
           else
-            echo "No existing messages found for this PR"
+            echo "No existing messages found after $MAX_RETRIES attempts"
             echo "IS_THREADED_REPLY=false" >> $GITHUB_ENV
           fi
 

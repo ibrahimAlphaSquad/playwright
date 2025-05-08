@@ -122,40 +122,42 @@ jobs:
         run: |
           # Debug: Verify channel info
           echo "Using Slack channel ID: ${{ env.SLACK_CHANNEL_ID }}"
-        
-          # Prepare the JSON payload
-          PAYLOAD=$(cat <<EOF
-          {
-            "channel": "${{ env.SLACK_CHANNEL_ID }}",
-            "attachments": [
-              {
-                "color": "${{ env.COLOR }}",
-                "pretext": "*${{ github.repository }}*",
-                "title": "${{ env.TITLE }} #${{ env.NUMBER }}",
-                "title_link": "${{ env.TITLE_LINK }}",
-                "text": "${{ env.MESSAGE }}",
-                "footer": "GitHub Actions • Thread-Key: ${{ env.THREAD_KEY }}",
-                "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
-                "mrkdwn_in": ["text", "pretext", "footer"],
-                "ts": "${{ env.TIMESTAMP }}"
-              }
-            ]
-          }
+          
+          # Create attachments JSON
+          ATTACHMENTS=$(cat <<EOF
+          [
+            {
+              "color": "${{ env.COLOR }}",
+              "pretext": "*${{ github.repository }}*",
+              "title": "${{ env.TITLE }} #${{ env.NUMBER }}",
+              "title_link": "${{ env.TITLE_LINK }}",
+              "text": "${{ env.MESSAGE }}",
+              "footer": "GitHub Actions • Thread-Key: ${{ env.THREAD_KEY }}",
+              "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+              "mrkdwn_in": ["text", "pretext", "footer"],
+              "ts": "${{ env.TIMESTAMP }}"
+            }
+          ]
           EOF
           )
           
-          # Debug: Print payload for troubleshooting (remove sensitive parts)
-          echo "Sending payload to Slack API (truncated for security):"
-          echo "$PAYLOAD" | jq 'del(.attachments[].text)' || echo "Failed to print truncated payload"
+          # Debug: Print attachments for troubleshooting
+          echo "Sending attachments to Slack API (truncated for security):"
+          echo "$ATTACHMENTS" | jq '.[0].text = "REDACTED"' || echo "Failed to print truncated attachments"
           
-          # Send the message using curl
+          # Send the message using curl with form-urlencoded data
           RESPONSE=$(curl -s -X POST \
+            "${{ env.SLACK_API_URL }}" \
             -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            --data "$PAYLOAD" \
-            "${{ env.SLACK_API_URL }}")
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            --data-urlencode "channel=${{ env.SLACK_CHANNEL_ID }}" \
+            --data-urlencode "attachments=$ATTACHMENTS" \
+            --data-urlencode "link_names=true" \
+            --data-urlencode "mrkdwn=true" \
+            --data-urlencode "unfurl_links=false" \
+            --data-urlencode "unfurl_media=false")
           
-          # Debug: Log response (but remove any sensitive info)
+          # Debug: Log response
           echo "Response from Slack API: $RESPONSE"
           
           # Extract the thread_ts from the response
@@ -545,64 +547,57 @@ jobs:
         run: |
           # Debug: Verify channel info
           echo "Using Slack channel ID: ${{ env.SLACK_CHANNEL_ID }}"
-        
-          # Prepare JSON payload based on whether this is a threaded reply
-          if [[ "${{ env.IS_THREADED_REPLY }}" == "true" ]]; then
-            # This is a reply to an existing thread
-            PAYLOAD=$(cat <<EOF
+          
+          # Create attachments JSON
+          ATTACHMENTS=$(cat <<EOF
+          [
             {
-              "channel": "${{ env.SLACK_CHANNEL_ID }}",
-              "thread_ts": "${{ env.THREAD_TS }}",
-              "attachments": [
-                {
-                  "color": "${{ env.COLOR }}",
-                  "title": "${{ env.TITLE }} #${{ env.NUMBER }}",
-                  "title_link": "${{ env.TITLE_LINK }}",
-                  "text": "${{ env.MESSAGE }}",
-                  "footer": "GitHub Actions • Thread-Key: ${{ env.THREAD_KEY }}",
-                  "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
-                  "mrkdwn_in": ["text", "pretext", "footer"],
-                  "ts": "${{ env.TIMESTAMP }}"
-                }
-              ]
+              "color": "${{ env.COLOR }}",
+              "title": "${{ env.TITLE }} #${{ env.NUMBER }}",
+              "title_link": "${{ env.TITLE_LINK }}",
+              "text": "${{ env.MESSAGE }}",
+              "footer": "GitHub Actions • Thread-Key: ${{ env.THREAD_KEY }}",
+              "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+              "mrkdwn_in": ["text", "pretext", "footer"],
+              "ts": "${{ env.TIMESTAMP }}"
             }
-            EOF
-            )
-          else
-            # No thread_ts exists, create a new top-level message
-            PAYLOAD=$(cat <<EOF
-            {
-              "channel": "${{ env.SLACK_CHANNEL_ID }}",
-              "attachments": [
-                {
-                  "color": "${{ env.COLOR }}",
-                  "pretext": "*${{ github.repository }}*",
-                  "title": "${{ env.TITLE }} #${{ env.NUMBER }}",
-                  "title_link": "${{ env.TITLE_LINK }}",
-                  "text": "${{ env.MESSAGE }}",
-                  "footer": "GitHub Actions • Thread-Key: ${{ env.THREAD_KEY }}",
-                  "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
-                  "mrkdwn_in": ["text", "pretext", "footer"],
-                  "ts": "${{ env.TIMESTAMP }}"
-                }
-              ]
-            }
-            EOF
-            )
+          ]
+          EOF
+          )
+
+          # Add pretext only for top-level messages, not replies
+          if [[ "${{ env.IS_THREADED_REPLY }}" != "true" ]]; then
+            # This is a new top-level message, add pretext
+            ATTACHMENTS=$(echo "$ATTACHMENTS" | jq '.[0].pretext = "*${{ github.repository }}*"')
           fi
           
-          # Debug: Print payload for troubleshooting (remove sensitive parts)
-          echo "Sending payload to Slack API (truncated for security):"
-          echo "$PAYLOAD" | jq 'del(.attachments[].text)' || echo "Failed to print truncated payload"
+          # Debug: Print attachments for troubleshooting
+          echo "Sending attachments to Slack API (truncated for security):"
+          echo "$ATTACHMENTS" | jq '.[0].text = "REDACTED"' || echo "Failed to print truncated attachments"
           
-          # Send the message via Slack API
-          RESPONSE=$(curl -s -X POST \
-            -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            --data "$PAYLOAD" \
-            "${{ env.SLACK_API_URL }}")
+          # Base curl command with common parameters
+          CURL_CMD="curl -s -X POST \
+            \"${{ env.SLACK_API_URL }}\" \
+            -H \"Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}\" \
+            -H \"Content-Type: application/x-www-form-urlencoded\" \
+            --data-urlencode \"channel=${{ env.SLACK_CHANNEL_ID }}\" \
+            --data-urlencode \"attachments=$ATTACHMENTS\" \
+            --data-urlencode \"link_names=true\" \
+            --data-urlencode \"mrkdwn=true\" \
+            --data-urlencode \"unfurl_links=false\" \
+            --data-urlencode \"unfurl_media=false\""
+            
+          # Add thread_ts if this is a reply
+          if [[ "${{ env.IS_THREADED_REPLY }}" == "true" ]]; then
+            CURL_CMD="$CURL_CMD --data-urlencode \"thread_ts=${{ env.THREAD_TS }}\""
+            echo "Sending as reply to thread ${{ env.THREAD_TS }}"
+          fi
           
-          # Debug: Log response (but remove any sensitive info)
+          # Execute the curl command
+          echo "Executing curl command"
+          RESPONSE=$(eval "$CURL_CMD")
+          
+          # Debug: Log response
           echo "Response from Slack API: $RESPONSE"
           
           # Extract thread_ts from response

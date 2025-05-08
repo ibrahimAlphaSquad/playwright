@@ -47,21 +47,23 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  # Channel ID must be used instead of channel name for Slack API
   SLACK_CHANNEL: alpha-pr-review
+  SLACK_CHANNEL_ID: "C08R6EB1DEU"  # Replace with your actual channel ID
   # Color scheme
-  COLOR_PR_OPENED: "#28a745" # Green
-  COLOR_PR_MERGED: "#28a745" # Green
-  COLOR_PR_CLOSED: "#dc3545" # Red
-  COLOR_PR_REOPENED: "#ffc107" # Yellow
-  COLOR_PR_SYNCHRONIZED: "#17a2b8" # Blue
-  COLOR_PR_REVIEW: "#007bff" # Blue
-  COLOR_PR_COMMENT: "#28a745" # Green
-  COLOR_PR_DRAFT: "#6c757d" # Gray
-  COLOR_PR_READY: "#28a745" # Green
-  COLOR_PR_ASSIGNED: "#9c27b0" # Purple
-  COLOR_PR_LABELED: "#ff9800" # Orange
-  COLOR_UNKNOWN: "#ffc107" # Yellow
-
+  COLOR_PR_OPENED: "#28a745"        # Green
+  COLOR_PR_MERGED: "#28a745"        # Green
+  COLOR_PR_CLOSED: "#dc3545"        # Red
+  COLOR_PR_REOPENED: "#ffc107"      # Yellow
+  COLOR_PR_SYNCHRONIZED: "#17a2b8"  # Blue
+  COLOR_PR_REVIEW: "#007bff"        # Blue
+  COLOR_PR_COMMENT: "#28a745"       # Green
+  COLOR_PR_DRAFT: "#6c757d"         # Gray
+  COLOR_PR_READY: "#28a745"         # Green
+  COLOR_PR_ASSIGNED: "#9c27b0"      # Purple
+  COLOR_PR_LABELED: "#ff9800"       # Orange
+  COLOR_UNKNOWN: "#ffc107"          # Yellow
+  
   # Add an API endpoint for the Slack messages API
   SLACK_API_URL: "https://slack.com/api/chat.postMessage"
 
@@ -90,7 +92,7 @@ jobs:
         run: |
           # Common PR details that will be included in most messages
           PR_DETAILS="*Title:* ${{ github.event.pull_request.title }}\n*Branch:* ${{ github.event.pull_request.head.ref }} → ${{ github.event.pull_request.base.ref }}\n*Author:* ${{ github.event.pull_request.user.login }}\n*Created:* $(date -d "${{ github.event.pull_request.created_at }}" "+%Y-%m-%d %H:%M:%S UTC")"
-
+          
           # Get PR body for description
           PR_BODY="${{ github.event.pull_request.body }}"
           # Truncate PR description to avoid too long messages
@@ -99,11 +101,11 @@ jobs:
           else
             TRUNCATED_BODY="$PR_BODY"
           fi
-
+          
           # Details for new PR
           echo "MESSAGE=👀 *YO, NEW PR JUST DROPPED!*\n\n${PR_DETAILS}\n\n*Description:* ${TRUNCATED_BODY}" >> $GITHUB_ENV
           echo "COLOR=${{ env.COLOR_PR_OPENED }}" >> $GITHUB_ENV
-
+          
           # Set current Unix timestamp for the message
           echo "TIMESTAMP=$(date +%s)" >> $GITHUB_ENV
 
@@ -118,10 +120,13 @@ jobs:
       - name: Send Slack notification
         id: send-notification
         run: |
+          # Debug: Verify channel info
+          echo "Using Slack channel ID: ${{ env.SLACK_CHANNEL_ID }}"
+        
           # Prepare the JSON payload
           PAYLOAD=$(cat <<EOF
           {
-            "channel": "${{ env.SLACK_CHANNEL }}",
+            "channel": "${{ env.SLACK_CHANNEL_ID }}",
             "attachments": [
               {
                 "color": "${{ env.COLOR }}",
@@ -138,17 +143,24 @@ jobs:
           }
           EOF
           )
-
+          
+          # Debug: Print payload for troubleshooting (remove sensitive parts)
+          echo "Sending payload to Slack API (truncated for security):"
+          echo "$PAYLOAD" | jq 'del(.attachments[].text)' || echo "Failed to print truncated payload"
+          
           # Send the message using curl
           RESPONSE=$(curl -s -X POST \
             -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
             -H "Content-Type: application/json" \
             --data "$PAYLOAD" \
             "${{ env.SLACK_API_URL }}")
-
+          
+          # Debug: Log response (but remove any sensitive info)
+          echo "Response from Slack API: $RESPONSE"
+          
           # Extract the thread_ts from the response
           RESPONSE_TS=$(echo "$RESPONSE" | jq -r '.ts')
-
+          
           # Check if we got a valid timestamp
           if [[ "$RESPONSE_TS" != "null" ]]; then
             echo "Successfully sent message with thread_ts: $RESPONSE_TS"
@@ -165,7 +177,7 @@ jobs:
             echo "Response: $RESPONSE"
             exit 1
           fi
-
+          
           # Check if the message was sent successfully
           if [[ "$(echo "$RESPONSE" | jq -r '.ok')" != "true" ]]; then
             echo "Failed to send Slack message: $(echo "$RESPONSE" | jq -r '.error')"
@@ -198,21 +210,21 @@ jobs:
         run: |
           # Get the head commit SHA
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-
+          
           # Use GitHub CLI to get commit info
           COMMIT_INFO=$(gh api repos/${{ github.repository }}/commits/${HEAD_SHA})
-
+          
           # Extract the commit message
           COMMIT_MSG=$(echo $COMMIT_INFO | jq -r '.commit.message')
-
+          
           # Escape newlines and other special chars for GitHub Actions
           COMMIT_MSG=$(echo "$COMMIT_MSG" | tr '\n' ' ' | sed 's/"/\\"/g')
-
+          
           # Set output - save commit message in a way that handles multiline messages
           echo "COMMIT_MESSAGE<<EOF" >> $GITHUB_ENV
           echo "$COMMIT_MSG" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-
+          
           # For debugging
           echo "Retrieved commit message for SHA: ${HEAD_SHA}"
 
@@ -243,7 +255,7 @@ jobs:
         with:
           name: pr-${{ github.event.pull_request.number }}-thread-ts
           path: ./
-        continue-on-error: true # Continue if artifact doesn't exist yet
+        continue-on-error: true  # Continue if artifact doesn't exist yet
 
       # Download thread_ts for Discussion events from artifacts
       - name: Download thread timestamp for Discussion events
@@ -253,7 +265,7 @@ jobs:
         with:
           name: discussion-${{ github.event.discussion.number }}-thread-ts
           path: ./
-        continue-on-error: true # Continue if artifact doesn't exist yet
+        continue-on-error: true  # Continue if artifact doesn't exist yet
 
       # Load thread_ts from artifact file
       - name: Load thread timestamp
@@ -281,7 +293,7 @@ jobs:
           if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "pull_request_review" || "${{ github.event_name }}" == "pull_request_review_comment" ]]; then
             PR_DETAILS="*Title:* ${{ github.event.pull_request.title }}\n*Branch:* ${{ github.event.pull_request.head.ref }} → ${{ github.event.pull_request.base.ref }}\n*Author:* ${{ github.event.pull_request.user.login }}\n*Created:* $(date -d "${{ github.event.pull_request.created_at }}" "+%Y-%m-%d %H:%M:%S UTC")"
           fi
-
+          
           if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "closed" && "${{ github.event.pull_request.merged }}" == "true" ]]; then
             # Details for merged PR
             MERGE_DETAILS="*Merged by:* ${{ github.event.sender.login }}\n*Merge time:* $(date -d "${{ github.event.pull_request.merged_at }}" "+%Y-%m-%d %H:%M:%S UTC")"
@@ -511,16 +523,19 @@ jobs:
             echo "TITLE_LINK=${{ github.event.pull_request.html_url }}" >> $GITHUB_ENV
           fi
 
-      # Send notification as a threaded reply if thread_ts exists
+      # Send Slack notification with thread_ts when it's a reply
       - name: Send Slack notification
         id: send-notification
         run: |
+          # Debug: Verify channel info
+          echo "Using Slack channel ID: ${{ env.SLACK_CHANNEL_ID }}"
+        
           # Prepare JSON payload based on whether this is a threaded reply
           if [[ "${{ env.IS_THREADED_REPLY }}" == "true" ]]; then
             # This is a reply to an existing thread
             PAYLOAD=$(cat <<EOF
             {
-              "channel": "${{ env.SLACK_CHANNEL }}",
+              "channel": "${{ env.SLACK_CHANNEL_ID }}",
               "thread_ts": "${{ env.THREAD_TS }}",
               "attachments": [
                 {
@@ -541,7 +556,7 @@ jobs:
             # No thread_ts exists, create a new top-level message
             PAYLOAD=$(cat <<EOF
             {
-              "channel": "${{ env.SLACK_CHANNEL }}",
+              "channel": "${{ env.SLACK_CHANNEL_ID }}",
               "attachments": [
                 {
                   "color": "${{ env.COLOR }}",
@@ -559,30 +574,34 @@ jobs:
             EOF
             )
           fi
-
+          
+          # Debug: Print payload for troubleshooting (remove sensitive parts)
+          echo "Sending payload to Slack API (truncated for security):"
+          echo "$PAYLOAD" | jq 'del(.attachments[].text)' || echo "Failed to print truncated payload"
+          
           # Send the message via Slack API
           RESPONSE=$(curl -s -X POST \
             -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
             -H "Content-Type: application/json" \
             --data "$PAYLOAD" \
             "${{ env.SLACK_API_URL }}")
-
+          
+          # Debug: Log response (but remove any sensitive info)
+          echo "Response from Slack API: $RESPONSE"
+          
           # Extract thread_ts from response
           RESPONSE_TS=$(echo "$RESPONSE" | jq -r '.ts')
           THREAD_TS=$RESPONSE_TS
-
+          
           # If this was a reply, use the existing thread_ts
           if [[ "${{ env.IS_THREADED_REPLY }}" == "true" ]]; then
             THREAD_TS="${{ env.THREAD_TS }}"
           fi
-
+          
           # Set the thread_ts for possible artifact creation
           echo "RESPONSE_TS=$RESPONSE_TS" >> $GITHUB_ENV
           echo "THREAD_TS=$THREAD_TS" >> $GITHUB_ENV
-
-          # Debug output
-          echo "Response from Slack API: $RESPONSE"
-
+          
           # Check if the message was sent successfully
           if [[ "$(echo "$RESPONSE" | jq -r '.ok')" != "true" ]]; then
             echo "Failed to send Slack message: $(echo "$RESPONSE" | jq -r '.error')"
@@ -595,7 +614,7 @@ jobs:
         run: |
           # Create the file with the thread_ts
           echo "${{ env.RESPONSE_TS }}" > discussion-thread-ts.txt
-
+        
       - name: Upload discussion thread artifact
         if: github.event_name == 'discussion' && github.event.action == 'created'
         uses: actions/upload-artifact@v4
@@ -603,7 +622,7 @@ jobs:
           name: discussion-${{ github.event.discussion.number }}-thread-ts
           path: discussion-thread-ts.txt
           retention-days: 90
-
+          
       # Store thread_ts for PR events if it doesn't already exist
       - name: Create thread_ts artifact for PR if it doesn't exist
         if: (github.event_name == 'pull_request' || github.event_name == 'pull_request_review' || github.event_name == 'pull_request_review_comment') && env.IS_THREADED_REPLY != 'true'

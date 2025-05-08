@@ -6,7 +6,7 @@ on:
       - closed
       - reopened
       - synchronize
-      - edited 
+      - edited
       - assigned
       - unassigned
       - labeled
@@ -43,9 +43,13 @@ env:
   # Slack configuration
   SLACK_CHANNEL: alpha-pr-review
   SLACK_INCOMING_WEBHOOK_URL: ${{ secrets.SLACK_INCOMING_WEBHOOK_URL }}
+  # SLACK_TOKEN is needed by the slackapi/slack-github-action AND for the search fallback.
+  # Prefer a Bot Token if possible for search (scopes: channels:history, search:read).
+  SLACK_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }} # Try using a Bot Token if available
+  # If bot token search doesn't work, fallback to a User OAuth Token with necessary scopes
   SLACK_USER_OAUTH_TOKEN: ${{ secrets.SLACK_USER_OAUTH_TOKEN }}
-  
-  # Color scheme
+
+  # Color scheme for Slack messages
   COLOR_PR_OPENED: "#28a745"     # Green
   COLOR_PR_MERGED: "#28a745"     # Green
   COLOR_PR_CLOSED: "#dc3545"     # Red
@@ -57,507 +61,684 @@ env:
   COLOR_PR_READY: "#28a745"      # Green
   COLOR_PR_ASSIGNED: "#9c27b0"   # Purple
   COLOR_PR_LABELED: "#ff9800"    # Orange
-  COLOR_UNKNOWN: "#ffc107"       # Yellow
-  
-  # Thread storage - Using PR comments
-  THREAD_COMMENT_PREFIX: "<!-- SLACK_THREAD:"
-  THREAD_COMMENT_SUFFIX: "-->"
+  COLOR_DISCUSSION: "#6f42c1"   # Purple for general discussions
+  COLOR_UNKNOWN: "#ffc107"       # Yellow (for edited PRs, unhandled events)
 
-  # Add an API endpoint for the Slack messages API
-  SLACK_API_URL: "https://slack.com/api/chat.postMessage"
+  # Marker format to store entity key and Slack Thread Timestamp (TS) in GitHub comments
+  THREAD_INFO_MARKER_START: ""
 
-# Split into two separate jobs to ensure PR creation goes first
+# Split into two separate jobs. The first handles the unique 'PR Opened' event
+# to ensure the initial message is sent and its thread_ts is captured.
+# The second job handles all other events, finding the thread_ts to post replies.
 jobs:
-  # Job for PR creation events only - this gets priority
+  # Job 1: Handle only the initial PR creation event
   notify_pr_creation:
     name: Notify PR Creation
+    # This job runs ONLY when a PR is opened.
     if: github.event_name == 'pull_request' && github.event.action == 'opened'
-    environment:
-      name: Production
     runs-on: ubuntu-latest
     steps:
-      - name: Create PR thread identifier
-        id: create-thread-id
+      - name: Create entity key and number
+        id: create-entity-key
         run: |
-          THREAD_KEY="${{ github.repository }}-pr-${{ github.event.pull_request.number }}"
-          echo "THREAD_KEY=${THREAD_KEY}" >> $GITHUB_ENV
-          echo "Created thread key: ${THREAD_KEY}"
+          # Create a unique key for this PR entity
+          ENTITY_NUMBER="${{ github.event.pull_request.number }}"
+          ENTITY_KEY="pr-${ENTITY_NUMBER}"
+          echo "ENTITY_NUMBER=${ENTITY_NUMBER}" >> $GITHUB_ENV
+          echo "ENTITY_KEY=${ENTITY_KEY}" >> $GITHUB_ENV
+          echo "Created entity key: ${ENTITY_KEY}"
 
-      - name: Set PR creation message
+      - name: Set PR creation message content
         id: event-message
         run: |
-          # Common PR details
-          PR_DETAILS="*Title:* ${{ github.event.pull_request.title }}\n*Branch:* ${{ github.event.pull_request.head.ref }} → ${{ github.event.pull_request.base.ref }}\n*Author:* ${{ github.event.pull_request.user.login }}\n*Created:* $(date -d "${{ github.event.pull_request.created_at }}" "+%Y-%m-%d %H:%M:%S UTC")"
-          
-          # Get PR body for description
-          PR_BODY="${{ github.event.pull_request.body }}"
-          # Truncate PR description to avoid too long messages
-          if [ ${#PR_BODY} -gt 200 ]; then
-            TRUNCATED_BODY="${PR_BODY:0:200}..."
-          else
-            TRUNCATED_BODY="$PR_BODY"
-          fi
-          
-          # Details for new PR
-          echo "MESSAGE=👀 *YO, NEW PR JUST DROPPED!*\n\n${PR_DETAILS}\n\n*Description:* ${TRUNCATED_BODY}" >> $GITHUB_ENV
-          echo "COLOR=${{ env.COLOR_PR_OPENED }}" >> $GITHUB_ENV
-          echo "TITLE=${{ github.event.pull_request.title }}" >> $GITHUB_ENV
-          echo "NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
-          echo "TITLE_LINK=${{ github.event.pull_request.html_url }}" >> $GITHUB_ENV
-          echo "TIMESTAMP=$(date +%s)" >> $GITHUB_ENV
+          # Common PR details to include in the message
+          PR_DETAILS="*Repo:* ${{ github.repository }}\n*Title:* ${{ github.event.pull_request.title }} (#${{ github.event.pull_request.number }})\n*Author:* ${{ github.event.pull_request.user.login }}"
 
-      - name: Send PR creation notification
+          # Get PR body for description and truncate it
+          PR_BODY="${{ github.event.pull_request.body }}"
+          TRUNCATED_BODY=""
+          if [ -n "$PR_BODY" ]; then
+            if [ ${#PR_BODY} -gt 300 ]; then # Truncate long descriptions
+              TRUNCATED_BODY="${PR_BODY:0:300}..."
+            else
+              TRUNCATED_BODY="$PR_BODY"
+            fi
+          fi
+
+          # Construct the message text for a new PR
+          echo "MESSAGE=👀 *New Pull Request Opened!*" >> $GITHUB_ENV
+          echo "MESSAGE=${MESSAGE}\n\n${PR_DETAILS}" >> $GITHUB_ENV # Add core details
+          if [ -n "${TRUNCATED_BODY}" ]; then # Add description only if it exists
+             echo "MESSAGE=${MESSAGE}\n\n*Description:*\n${TRUNCATED_BODY}" >> $GITHUB_ENV
+          fi
+
+          # Set other payload details
+          echo "COLOR=${{ env.COLOR_PR_OPENED }}" >> $GITHUB_ENV
+          echo "PAYLOAD_TITLE=${{ github.event.pull_request.title }}" >> $GITHUB_ENV
+          echo "PAYLOAD_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          echo "PAYLOAD_TITLE_LINK=${{ github.event.pull_request.html_url }}" >> $GITHUB_ENV
+          echo "TIMESTAMP=$(date +%s)" >> $GITHUB_ENV # Use current time for the initial message's TS
+
+      # Send the initial Slack notification using the webhook action
+      - name: Send Initial Slack Notification
+        id: send_initial_slack # Added ID to capture the timestamp output (ts)
+        uses: slackapi/slack-github-action@v2.0.0
+        env:
+          # Use the webhook URL for sending messages
+          SLACK_WEBHOOK_URL: ${{ env.SLACK_INCOMING_WEBHOOK_URL }}
+          # The slackapi action might also need the main SLACK_TOKEN for some features,
+          # but for basic incoming webhooks, only SLACK_WEBHOOK_URL is usually required.
+          # Include SLACK_TOKEN here just in case the action uses it internally.
+          SLACK_TOKEN: ${{ env.SLACK_TOKEN }} # Pass main token to the action
+
+        with:
+          payload: |
+            {
+              "channel": "${{ env.SLACK_CHANNEL }}",
+              "attachments": [
+                {
+                  "color": "${{ env.COLOR }}",
+                  # Include payload details set in the previous step
+                  "pretext": "*${{ github.repository }}*",
+                  "title": "${{ env.PAYLOAD_TITLE }} #${{ env.PAYLOAD_NUMBER }}",
+                  "title_link": "${{ env.PAYLOAD_TITLE_LINK }}",
+                  "text": "${{ env.MESSAGE }}",
+                  "footer": "GitHub Actions • Entity: ${{ env.ENTITY_KEY }}", # Include key for search fallback
+                  "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+                  "mrkdwn_in": ["text", "pretext", "footer"],
+                  "ts": "${{ env.TIMESTAMP }}" # Using the generated timestamp for the initial message
+                }
+              ]
+            }
+          webhook-type: incoming-webhook # Specify webhook type
+
+      # Store the Slack thread timestamp in a GitHub PR comment
+      # This is the primary method for other jobs to find the thread.
+      - name: Store Slack thread timestamp in PR comment
+        id: store-thread-info
+        env:
+          GH_TOKEN: ${{ github.token }} # Use the default GITHUB_TOKEN for API access
+          # Capture the actual Slack message timestamp (ts) from the previous step's output!
+          THREAD_TS: ${{ steps.send_initial_slack.outputs.ts }}
+          # Use the ENTITY_NUMBER (PR number) captured earlier.
+          ENTITY_NUMBER: ${{ env.ENTITY_NUMBER }}
+          ENTITY_KEY: ${{ env.ENTITY_KEY }}
+        # Only run this step if the Slack message was sent successfully and returned a valid timestamp
+        if: success() && env.THREAD_TS != '' && env.THREAD_TS != 'null' && env.ENTITY_NUMBER != ''
+        run: |
+          # Create a comment on the PR that includes the captured Slack thread timestamp.
+          # Use the defined markers and store the key and the timestamp.
+          COMMENT_BODY="${{ env.THREAD_INFO_MARKER_START }} key:${{ env.ENTITY_KEY }} ts:${{ env.THREAD_TS }} ${{ env.THREAD_INFO_MARKER_END }}"
+
+          echo "Storing thread info: ${COMMENT_BODY}"
+
+          # Use gh api to create the comment on the issue (PR)
+          gh api --method POST /repos/${{ github.repository }}/issues/${{ env.ENTITY_NUMBER }}/comments \
+            -f body="$COMMENT_BODY"
+
+          echo "Thread information stored in PR comment."
+
+  # Job 2: Handle all other PR and Discussion events
+  notify_other_events:
+    name: Notify Other Events
+    # This job runs for all events EXCEPT the initial PR open.
+    if: github.event_name != 'pull_request' || github.event.action != 'opened'
+    # Note: No 'needs' dependency on notify_pr_creation due to differing 'if' conditions at the workflow run level.
+    # The threading mechanism relies on finding the thread_ts via comment or search.
+    runs-on: ubuntu-latest
+    steps:
+      # No longer need a fragile sleep with the improved threading lookup
+
+      - name: Create entity key and number
+        id: create-entity-key
+        run: |
+          # Determine the entity number (PR or Discussion) and create a unique key
+          ENTITY_NUMBER=""
+          ENTITY_KEY=""
+
+          # Check if the event payload contains PR or Discussion data
+          if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "pull_request_review" || "${{ github.event_name }}" == "pull_request_review_comment" ]]; then
+            ENTITY_NUMBER="${{ github.event.pull_request.number }}"
+            ENTITY_KEY="pr-${ENTITY_NUMBER}"
+          elif [[ "${{ github.event_name }}" == "discussion" || "${{ github.event_name }}" == "discussion_comment" ]]; then
+            ENTITY_NUMBER="${{ github.event.discussion.number }}"
+            ENTITY_KEY="discussion-${ENTITY_NUMBER}"
+          fi
+
+          # Check if we successfully determined an entity
+          if [ -n "$ENTITY_NUMBER" ]; then
+            echo "ENTITY_NUMBER=${ENTITY_NUMBER}" >> $GITHUB_ENV
+            echo "ENTITY_KEY=${ENTITY_KEY}" >> $GITHUB_ENV
+            echo "Created entity key: ${ENTITY_KEY}"
+          else
+            # If we can't get an entity number, we can't thread or link. Exit the step.
+            echo "Could not determine entity number/key for event ${{ github.event_name }}."
+            echo "Skip subsequent steps."
+            exit 0 # Exit this step gracefully so the job doesn't necessarily fail
+          fi
+
+
+      # Attempt to find thread info in GitHub comments (Primary method for PRs)
+      # This step only applies to entities where comments are used for storage (currently PRs).
+      - name: Find Slack thread timestamp in entity comments
+        id: find-thread-info-comment
+        # Only run this step if the entity key indicates a PR
+        if: startsWith(env.ENTITY_KEY, 'pr-')
+        env:
+          GH_TOKEN: ${{ github.token }} # Use the default GITHUB_TOKEN
+          ENTITY_NUMBER: ${{ env.ENTITY_NUMBER }} # Use the entity number captured above
+          START_MARKER: ${{ env.THREAD_INFO_MARKER_START }}
+          END_MARKER: ${{ env.THREAD_INFO_MARKER_END }}
+        run: |
+          # Look for our marker comment containing the entity key and thread timestamp on the PR issue
+          echo "Searching comments on entity number: ${{ env.ENTITY_NUMBER }}"
+
+          # Fetch comments using gh api
+          # Use `|| true` to prevent the step from failing if there are no comments or API issues
+          COMMENTS=$(gh api /repos/${{ github.repository }}/issues/${{ env.ENTITY_NUMBER }}/comments 2>/dev/null) || true
+
+          THREAD_COMMENT_BODY=""
+          if [ -n "$COMMENTS" ]; then
+              # Use jq to find the comment with the marker and extract the content between markers
+              # Take the last match found in case of multiple markers
+              THREAD_COMMENT_BODY=$(echo "$COMMENTS" | jq -r --arg start_marker "$START_MARKER" --arg end_marker "$END_MARKER" \
+                '.[] | select(.body | contains($start_marker)) | .body | sub(".*?\\Q" + $start_marker + "\\E"; "") | sub("\\Q" + $end_marker + "\\E.*"; "")' | tail -n 1)
+          fi
+
+          # If a marker comment body was found, attempt to parse it
+          if [ -n "$THREAD_COMMENT_BODY" ]; then
+            echo "Found potential thread marker body: $THREAD_COMMENT_BODY"
+            # Use regex to extract the key and timestamp from the parsed comment body
+            if [[ "$THREAD_COMMENT_BODY" =~ key:([^ ]+) ts:([^ ]+) ]]; then
+              COMMENT_ENTITY_KEY="${BASH_REMATCH[1]}"
+              COMMENT_THREAD_TS="${BASH_REMATCH[2]}"
+
+              echo "Extracted key: $COMMENT_ENTITY_KEY"
+              echo "Extracted ts: $COMMENT_THREAD_TS"
+
+              # Verify the extracted key matches the current entity key and the timestamp is valid
+              if [ "$COMMENT_ENTITY_KEY" == "${{ env.ENTITY_KEY }}" ] && [ -n "$COMMENT_THREAD_TS" ] && [ "$COMMENT_THREAD_TS" != "null" ]; then
+                 echo "Matching key and valid timestamp found in comment."
+                 echo "THREAD_TS=${COMMENT_THREAD_TS}" >> $GITHUB_ENV # Set the found timestamp
+                 echo "FOUND_THREAD=true" >> $GITHUB_ENV # Indicate success
+                 echo "Thread info found in comment."
+              else
+                 echo "Key mismatch or invalid timestamp found in comment."
+                 echo "FOUND_THREAD=false" >> $GITHUB_ENV # Ensure false if parsing failed
+              fi
+            else
+               echo "Comment marker found, but key/ts format is incorrect."
+               echo "FOUND_THREAD=false" >> $GITHUB_ENV # Ensure false if format is wrong
+            fi
+          else
+            echo "No thread marker comment found on entity, or no comments available."
+            echo "FOUND_THREAD=false" >> $GITHUB_ENV # Ensure false if no comment or body
+          fi
+
+      # If no thread info found in comments (or not a PR event type), search Slack as a fallback
+      - name: Search Slack for existing thread (Fallback)
+        id: search-slack
+        # Run this step ONLY if thread info was NOT found in the comment lookup step
+        if: env.FOUND_THREAD != 'true'
+        env:
+          # Use the primary SLACK_TOKEN first, fallback to USER_OAUTH_TOKEN
+          # Note: The Slack Search API historically required a user token, verify if a bot token works.
+          PRIMARY_SLACK_TOKEN: ${{ env.SLACK_TOKEN }}
+          FALLBACK_SLACK_TOKEN: ${{ env.SLACK_USER_OAUTH_TOKEN }}
+          ENTITY_KEY: ${{ env.ENTITY_KEY }} # Use the entity key captured earlier
+          SLACK_CHANNEL: ${{ env.SLACK_CHANNEL }} # Use the channel name
+
+        run: |
+          # Use the determined ENTITY_KEY to search for the original message in Slack
+          # Search for the marker string "key:<ENTITY_KEY>" within the channel
+          SEARCH_QUERY="in:${SLACK_CHANNEL} \"${{ env.THREAD_INFO_MARKER_START }} key:${ENTITY_KEY}\""
+
+          echo "Searching for existing messages with query: $SEARCH_QUERY"
+
+          # Function to perform Slack search
+          perform_search() {
+              local token="$1"
+              local query="$2"
+              local api_url="https://slack.com/api/search.messages"
+              curl -s -X POST \
+                -H "Content-Type: application/x-www-form-urlencoded" \
+                -H "Authorization: Bearer $token" \
+                --data-urlencode "query=$query" \
+                --data-urlencode "sort=timestamp" \
+                --data-urlencode "sort_dir=asc" \
+                --data-urlencode "count=1" \
+                "$api_url"
+          }
+
+          SEARCH_RESPONSE=""
+          # Try searching with the primary token first
+          if [ -n "$PRIMARY_SLACK_TOKEN" ]; then
+              echo "Attempting search with Primary Slack Token..."
+              SEARCH_RESPONSE=$(perform_search "$PRIMARY_SLACK_TOKEN" "$SEARCH_QUERY")
+          elif [ -n "$FALLBACK_SLACK_TOKEN" ]; then
+              echo "Attempting search with Fallback Slack User Token..."
+              SEARCH_RESPONSE=$(perform_search "$FALLBACK_SLACK_TOKEN" "$SEARCH_QUERY")
+          else
+              echo "Neither Primary SLACK_TOKEN nor Fallback SLACK_USER_OAUTH_TOKEN is available for search."
+              echo "FOUND_THREAD=false" >> $GITHUB_ENV # Ensure false if no token
+              exit 0 # Exit gracefully if no token is available for search
+          fi
+
+          # Check if the search was successful and found matches
+          TOTAL_MATCHES=$(echo "$SEARCH_RESPONSE" | jq -r '.messages.total')
+          THREAD_TS=""
+
+          if [ "$TOTAL_MATCHES" -gt 0 ]; then
+            # Get the timestamp (ts) of the first message match
+            THREAD_TS=$(echo "$SEARCH_RESPONSE" | jq -r '.messages.matches[0].ts')
+
+            if [ -n "$THREAD_TS" ] && [ "$THREAD_TS" != "null" ]; then
+                echo "Found existing message in Slack with timestamp: $THREAD_TS"
+                echo "THREAD_TS=$THREAD_TS" >> $GITHUB_ENV # Set the found timestamp
+                echo "FOUND_THREAD=true" >> $GITHUB_ENV # Indicate success
+            else
+                echo "Search found matches, but could not extract a valid timestamp from response."
+                echo "FOUND_THREAD=false" >> $GITHUB_ENV # Ensure false if TS not found
+            fi
+          else
+            echo "No existing messages found in Slack for entity key: ${ENTITY_KEY}"
+            echo "FOUND_THREAD=false" >> $GITHUB_ENV # Ensure false if no matches
+          fi
+
+
+      # For synchronize events, fetch the latest commit message using GitHub API
+      # This step is specific to PR synchronize events and runs conditionally.
+      - name: Get commit message for synchronize event
+        id: get-commit-message
+        if: github.event_name == 'pull_request' && github.event.action == 'synchronize'
+        env:
+          GH_TOKEN: ${{ github.token }} # Use the default GITHUB_TOKEN
+        run: |
+          # Get the HEAD commit SHA from the synchronize event payload
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          if [ -z "$HEAD_SHA" ]; then
+            echo "Error: HEAD_SHA not found in event payload for synchronize."
+            echo "COMMIT_MESSAGE=Could not fetch commit message details (SHA not found)." >> $GITHUB_ENV
+            exit 0 # Exit gracefully
+          fi
+
+          echo "Fetching commit info for SHA: ${HEAD_SHA}"
+
+          # Use GitHub CLI to get commit info
+          # Use `|| true` to prevent step failure on gh api error
+          COMMIT_INFO=$(gh api repos/${{ github.repository }}/commits/${HEAD_SHA} 2>/dev/null) || true
+
+          COMMIT_MSG="Could not fetch commit message." # Default message if API fails or message is empty
+
+          if [ -n "$COMMIT_INFO" ]; then
+              # Extract the commit message using jq
+              EXTRACTED_MSG=$(echo "$COMMIT_INFO" | jq -r '.commit.message')
+              if [ "$EXTRACTED_MSG" != "null" ] && [ -n "$EXTRACTED_MSG" ]; then
+                  COMMIT_MSG="$EXTRACTED_MSG"
+              fi
+          fi
+
+          echo "Retrieved commit message: $COMMIT_MSG"
+
+          # Sanitize commit message for shell/env variable setting
+          # Replace newlines with spaces and escape quotes
+          SANITIZED_COMMIT_MSG=$(echo "$COMMIT_MSG" | tr '\n' ' ' | sed 's/"/\\"/g')
+
+          # Set environment variable using EOF delimiter for potential multiline content
+          echo "COMMIT_MESSAGE<<EOF" >> $GITHUB_ENV
+          echo "$SANITIZED_COMMIT_MSG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+          echo "Commit message prepared."
+
+
+      # Determine the specific message content and color based on the event type and action
+      - name: Set event message content and color
+        id: set-message-content
+        run: |
+          # Common details for PR-related events
+          PR_DETAILS=""
+          if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "pull_request_review" || "${{ github.event_name }}" == "pull_request_review_comment" ]]; then
+            # Link to the PR itself for context in threaded messages
+            PR_DETAILS="*PR:* <${{ github.event.pull_request.html_url }}|#${{ github.event.pull_request.number }} ${{ github.event.pull_request.title }}> by ${{ github.event.pull_request.user.login }}"
+          fi
+
+          # Common details for Discussion-related events
+          DISCUSSION_DETAILS=""
+          if [[ "${{ github.event_name }}" == "discussion" || "${{ github.event_name }}" == "discussion_comment" ]]; then
+             # Link to the discussion itself for context
+             DISCUSSION_DETAILS="*Discussion:* <${{ github.event.discussion.html_url }}|#${{ github.event.discussion.number }} ${{ github.event.discussion.title }}> by ${{ github.event.discussion.user.login }}"
+          fi
+
+          MESSAGE_PREFIX=""
+          EVENT_DETAILS=""
+          MESSAGE_COLOR="${{ env.COLOR_UNKNOWN }}" # Default color
+
+          # --- Handle Pull Request Actions ---
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+              case "${{ github.event.action }}" in
+                  closed)
+                      if [[ "${{ github.event.pull_request.merged }}" == "true" ]]; then
+                          MESSAGE_PREFIX="🎉 *Pull Request Merged!*"
+                          EVENT_DETAILS="*Merged by:* ${{ github.event.sender.login }}\n*Merge time:* $(date -d "${{ github.event.pull_request.merged_at }}" "+%Y-%m-%d %H:%M:%S UTC")"
+                          MESSAGE_COLOR="${{ env.COLOR_PR_MERGED }}"
+                      else
+                          MESSAGE_PREFIX="🚫 *Pull Request Closed!*"
+                          EVENT_DETAILS="*Closed by:* ${{ github.event.sender.login }}\n*Close time:* $(date -d "${{ github.event.pull_request.closed_at }}" "+%Y-%m-%d %H:%M:%S UTC")"
+                          MESSAGE_COLOR="${{ env.COLOR_PR_CLOSED }}"
+                      fi
+                      ;;
+                  reopened)
+                      MESSAGE_PREFIX="🔄 *Pull Request Reopened!*"
+                      EVENT_DETAILS="*Reopened by:* ${{ github.event.sender.login }}\n*Reopen time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
+                      MESSAGE_COLOR="${{ env.COLOR_PR_REOPENED }}"
+                      ;;
+                  synchronize)
+                      MESSAGE_PREFIX="✨ *New commit pushed!*"
+                      # Use the sanitized commit message captured previously
+                      COMMIT_MSG_CONTENT="${{ env.COMMIT_MESSAGE }}"
+                      EVENT_DETAILS="*Commit SHA:* \`${{ github.event.pull_request.head.sha }}\`\n*Message:* ${COMMIT_MSG_CONTENT}"
+                      MESSAGE_COLOR="${{ env.COLOR_PR_SYNCHRONIZED }}"
+                      ;;
+                  edited)
+                      MESSAGE_PREFIX="✏️ *Pull Request Edited*"
+                      EVENT_DETAILS="*Edited by:* ${{ github.event.sender.login }}\n*Edit time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
+                      # Add details about what was edited
+                      CHANGES=""
+                      if [[ "${{ github.event.changes.title }}" != "" ]]; then CHANGES="${CHANGES}\n*Title changed:* `${{ github.event.changes.title.from }}` → `${{ github.event.pull_request.title }}`"; fi
+                      if [[ "${{ github.event.changes.body }}" != "" ]]; then CHANGES="${CHANGES}\n*Description edited*"; fi
+                       if [[ "${{ github.event.changes.base }}" != "" ]]; then CHANGES="${CHANGES}\n*Base branch changed:* `${{ github.event.changes.base.from.ref }}` → `${{ github.event.pull_request.base.ref }}`"; fi
+                      if [ -n "$CHANGES" ]; then EVENT_DETAILS="${EVENT_DETAILS}${CHANGES}"; fi
+                      MESSAGE_COLOR="${{ env.COLOR_UNKNOWN }}" # Edited could be various colors
+                      ;;
+                  converted_to_draft)
+                      MESSAGE_PREFIX="⏳ *Pull Request Converted to Draft*"
+                      EVENT_DETAILS="*Converted by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
+                      MESSAGE_COLOR="${{ env.COLOR_PR_DRAFT }}"
+                      ;;
+                  ready_for_review)
+                      MESSAGE_PREFIX="✅ *Pull Request Ready for Review*"
+                      EVENT_DETAILS="*Marked ready by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
+                      MESSAGE_COLOR="${{ env.COLOR_PR_READY }}"
+                      ;;
+                  assigned)
+                      MESSAGE_PREFIX="👉 *Pull Request Assigned*"
+                      EVENT_DETAILS="*Assigned to:* ${{ github.event.assignee.login }}\n*Assigned by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
+                      MESSAGE_COLOR="${{ env.COLOR_PR_ASSIGNED }}"
+                      ;;
+                  unassigned)
+                      MESSAGE_PREFIX="🙅 *Pull Request Unassigned*"
+                      EVENT_DETAILS="*Unassigned from:* ${{ github.event.assignee.login }}\n*Unassigned by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
+                      MESSAGE_COLOR="${{ env.COLOR_PR_ASSIGNED }}"
+                      ;;
+                  labeled)
+                      MESSAGE_PREFIX="🏷️ *Label Added to Pull Request*"
+                      EVENT_DETAILS="*Label added:* `${{ github.event.label.name }}`\n*Added by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
+                      MESSAGE_COLOR="${{ env.COLOR_PR_LABELED }}"
+                      ;;
+                  unlabeled)
+                      MESSAGE_PREFIX="✂️ *Label Removed from Pull Request*"
+                      EVENT_DETAILS="*Label removed:* `${{ github.event.label.name }}`\n*Removed by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
+                      MESSAGE_COLOR="${{ env.COLOR_PR_LABELED }}" # Use label color for both
+                      ;;
+                  review_requested)
+                      MESSAGE_PREFIX="💯 *Review Requested*"
+                      REVIEWER=""
+                      if [[ -n "${{ github.event.requested_reviewer.login }}" ]]; then REVIEWER="${{ github.event.requested_reviewer.login }}"; fi
+                      if [[ -n "${{ github.event.requested_team.name }}" ]]; then REVIEWER="team ${{ github.event.requested_team.name }}"; fi
+                      EVENT_DETAILS="*Reviewer:* ${REVIEWER}\n*Requested by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
+                      MESSAGE_COLOR="${{ env.COLOR_PR_REVIEW }}"
+                      ;;
+                   review_request_removed)
+                      MESSAGE_PREFIX="❌ *Review Request Removed*"
+                      REVIEWER=""
+                      if [[ -n "${{ github.event.requested_reviewer.login }}" ]]; then REVIEWER="${{ github.event.requested_reviewer.login }}"; fi
+                      if [[ -n "${{ github.event.requested_team.name }}" ]]; then REVIEWER="team ${{ github.event.requested_team.name }}"; fi
+                      EVENT_DETAILS="*Reviewer:* ${REVIEWER}\n*Removed by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
+                      MESSAGE_COLOR="${{ env.COLOR_PR_REVIEW }}"
+                      ;;
+                  *)
+                      MESSAGE_PREFIX="❓ *Unhandled PR Event: ${{ github.event.action }}*"
+                      EVENT_DETAILS="*Action:* ${{ github.event.action }}\n*Link:* ${{ github.event.pull_request.html_url }}"
+                      MESSAGE_COLOR="${{ env.COLOR_UNKNOWN }}"
+                      ;;
+              esac
+              # Combine PR details with specific event details
+              echo "MESSAGE=${MESSAGE_PREFIX}\n\n${PR_DETAILS}\n\n${EVENT_DETAILS}" >> $GITHUB_ENV
+
+          # --- Handle Pull Request Review and Comment Actions ---
+          elif [[ "${{ github.event_name }}" == "pull_request_review" && "${{ github.event.action }}" == "submitted" ]]; then
+              REVIEW_STATE="${{ github.event.review.state }}"
+              REVIEW_ICON="💬"
+              REVIEW_PREFIX="Review Submitted"
+              if [[ "${REVIEW_STATE}" == "approved" ]]; then REVIEW_ICON="✅"; REVIEW_PREFIX="Review Approved"; fi
+              if [[ "${REVIEW_STATE}" == "changes_requested" ]]; then REVIEW_ICON="❌"; REVIEW_PREFIX="Changes Requested"; fi
+
+              # Get truncated review body
+              REVIEW_BODY="${{ github.event.review.body }}"
+              TRUNCATED_REVIEW=""
+              if [ -n "$REVIEW_BODY" ]; then
+                  if [ ${#REVIEW_BODY} -gt 200 ]; then TRUNCATED_REVIEW="${REVIEW_BODY:0:200}..."; else TRUNCATED_REVIEW="$REVIEW_BODY"; fi
+              fi
+
+              EVENT_DETAILS="*Reviewer:* ${{ github.event.review.user.login }}\n*State:* ${REVIEW_STATE}\n*Time:* $(date -d "${{ github.event.review.submitted_at }}" "+%Y-%m-%d %H:%M:%S UTC")\n*Link:* <${{ github.event.review.html_url }}|View Review>" # Added link
+
+              if [[ -n "${TRUNCATED_REVIEW}" ]]; then EVENT_DETAILS="${EVENT_DETAILS}\n*Comment:* ${TRUNCATED_REVIEW}"; fi
+
+              echo "MESSAGE=${REVIEW_ICON} *${REVIEW_PREFIX}!*" >> $GITHUB_ENV
+              echo "MESSAGE=${MESSAGE}\n\n${PR_DETAILS}\n\n${EVENT_DETAILS}" >> $GITHUB_ENV
+              MESSAGE_COLOR="${{ env.COLOR_PR_REVIEW }}" # Use review color
+
+          elif [[ "${{ github.event_name }}" == "pull_request_review_comment" ]]; then
+              COMMENT="${{ github.event.comment.body }}"
+              TRUNCATED_COMMENT=""
+              if [ -n "$COMMENT" ]; then
+                 if [ ${#COMMENT} -gt 200 ]; then TRUNCATED_COMMENT="${COMMENT:0:200}..."; else TRUNCATED_COMMENT="$COMMENT"; fi
+              fi
+
+              # Determine file path and line number
+              PATH_WITH_LINE="${{ github.event.comment.path }}"
+              if [[ -n "${{ github.event.comment.line }}" ]]; then PATH_WITH_LINE="${{ github.event.comment.path }}:L${{ github.event.comment.line }}"; fi
+              elif [[ -n "${{ github.event.comment.original_line }}" ]]; then PATH_WITH_LINE="${{ github.event.comment.path }}:L${{ github.event.comment.original_line }} (original)"; fi
+
+
+              VERB="Created"
+              PREFIX="New Review Comment"
+              ACTION_ICON="💬"
+              if [[ "${{ github.event.action }}" == "edited" ]]; then VERB="Edited"; PREFIX="Review Comment Edited"; ACTION_ICON="✏️"; fi
+              if [[ "${{ github.event.action }}" == "deleted" ]]; then VERB="Deleted"; PREFIX="Review Comment Deleted"; ACTION_ICON="🗑️"; fi
+
+              EVENT_DETAILS="*Commenter:* ${{ github.event.comment.user.login }}\n*Time:* $(date -d "${{ github.event.comment.created_at }}" "+%Y-%m-%d %H:%M:%S UTC")\n*Path:* `${PATH_WITH_LINE}`\n*Link:* <${{ github.event.comment.html_url }}|View Comment>" # Added link
+
+              if [[ "${{ github.event.action }}" != "deleted" ]]; then EVENT_DETAILS="${EVENT_DETAILS}\n*Comment:* ${TRUNCATED_COMMENT}"; fi
+
+              echo "MESSAGE=${ACTION_ICON} *${PREFIX}!*" >> $GITHUB_ENV
+              echo "MESSAGE=${MESSAGE}\n\n${PR_DETAILS}\n\n${EVENT_DETAILS}" >> $GITHUB_ENV
+              MESSAGE_COLOR="${{ env.COLOR_PR_COMMENT }}" # Use comment color
+
+
+          # --- Handle Discussion Actions ---
+          elif [[ "${{ github.event_name }}" == "discussion" ]]; then
+              DISCUSSION_URL="${{ github.event.discussion.html_url }}"
+
+              case "${{ github.event.action }}" in
+                  created)
+                      MESSAGE_PREFIX="🆕 *New Discussion Started!*"
+                      EVENT_DETAILS="*Category:* ${{ github.event.discussion.category.name }}\n*Created at:* $(date -d "${{ github.event.discussion.created_at }}" "+%Y-%m-%d %H:%M:%S UTC")\n*Link:* <${DISCUSSION_URL}|View Discussion>"
+                       # Truncate discussion body for creation message
+                       DISCUSSION_BODY="${{ github.event.discussion.body }}"
+                       TRUNCATED_BODY=""
+                       if [ -n "$DISCUSSION_BODY" ]; then
+                          if [ ${#DISCUSSION_BODY} -gt 300 ]; then TRUNCATED_BODY="${DISCUSSION_BODY:0:300}..."; else TRUNCATED_BODY="$DISCUSSION_BODY"; fi
+                          EVENT_DETAILS="${EVENT_DETAILS}\n*Body:*\n${TRUNCATED_BODY}"
+                       fi
+                       ;;
+                   edited)
+                       MESSAGE_PREFIX="✏️ *Discussion Edited*"
+                       EVENT_DETAILS="*Edited by:* ${{ github.event.sender.login }}\n*Edited at:* $(date "+%Y-%m-%d %H:%M:%S UTC")\n*Link:* <${DISCUSSION_URL}|View Discussion>"
+                       # Can add changes if needed, similar to PR edited
+                       ;;
+                   deleted)
+                       MESSAGE_PREFIX="🗑️ *Discussion Deleted*"
+                       # Note: Discussion data might be limited in deleted event payload
+                       EVENT_DETAILS="*Deleted by:* ${{ github.event.sender.login }}\n*Deleted at:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
+                       ;;
+                   answered)
+                       MESSAGE_PREFIX="✅ *Discussion Answered!*"
+                       EVENT_DETAILS="*Answered by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
+                       # Link to answer comment if possible? Event payload might provide answer_html_url
+                       if [[ -n "${{ github.event.discussion.answer_html_url }}" ]]; then EVENT_DETAILS="${EVENT_DETAILS}\n*Answer Link:* <${{ github.event.discussion.answer_html_url }}|View Answer>"; fi
+                       ;;
+                   unanswered)
+                       MESSAGE_PREFIX="❓ *Discussion Unanswered*"
+                       EVENT_DETAILS="*Unanswered by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")\n*Link:* <${DISCUSSION_URL}|View Discussion>"
+                       ;;
+                  *)
+                      MESSAGE_PREFIX="❓ *Unhandled Discussion Event: ${{ github.event.action }}*"
+                      EVENT_DETAILS="*Action:* ${{ github.event.action }}\n*Link:* <${DISCUSSION_URL}|View Discussion>"
+                      ;;
+              esac
+              # Combine Discussion details with specific event details
+              echo "MESSAGE=${MESSAGE_PREFIX}\n\n${DISCUSSION_DETAILS}\n\n${EVENT_DETAILS}" >> $GITHUB_ENV
+              MESSAGE_COLOR="${{ env.COLOR_DISCUSSION }}" # Use discussion color for all discussion events
+
+          elif [[ "${{ github.event_name }}" == "discussion_comment" ]]; then
+              # Discussion Comment events
+              COMMENT_URL="${{ github.event.comment.html_url }}"
+              COMMENT_BODY="${{ github.event.comment.body }}"
+              TRUNCATED_COMMENT=""
+              if [ -n "$COMMENT_BODY" ]; then
+                 if [ ${#COMMENT_BODY} -gt 200 ]; then TRUNCATED_COMMENT="${COMMENT_BODY:0:200}..."; else TRUNCATED_COMMENT="$COMMENT_BODY"; fi
+              fi
+
+              VERB="Created"
+              PREFIX="New Discussion Comment"
+              ACTION_ICON="💬"
+              if [[ "${{ github.event.action }}" == "edited" ]]; then VERB="Edited"; PREFIX="Discussion Comment Edited"; ACTION_ICON="✏️"; fi
+              if [[ "${{ github.event.action }}" == "deleted" ]]; then VERB="Deleted"; PREFIX="Discussion Comment Deleted"; ACTION_ICON="🗑️"; fi
+
+              EVENT_DETAILS="*Commenter:* ${{ github.event.comment.user.login }}\n*Time:* $(date -d "${{ github.event.comment.created_at }}" "+%Y-%m-%d %H:%M:%S UTC")\n*Link:* <${COMMENT_URL}|View Comment>"
+
+              if [[ "${{ github.event.action }}" != "deleted" ]]; then EVENT_DETAILS="${EVENT_DETAILS}\n*Comment:* ${TRUNCATED_COMMENT}"; fi
+
+              echo "MESSAGE=${ACTION_ICON} *${PREFIX}!*" >> $GITHUB_ENV
+              echo "MESSAGE=${MESSAGE}\n\n${DISCUSSION_DETAILS}\n\n${EVENT_DETAILS}" >> $GITHUB_ENV
+              MESSAGE_COLOR="${{ env.COLOR_DISCUSSION }}" # Use discussion color for comments
+
+          else
+            # Fallback for any events caught by the trigger but not explicitly handled
+            MESSAGE_PREFIX="❓ *Unhandled GitHub Event*"
+            EVENT_DETAILS="*Event:* ${{ github.event_name }}\n*Action:* ${{ github.event.action }}\n*Repo:* ${{ github.repository }}"
+             echo "MESSAGE=${MESSAGE_PREFIX}\n\n${EVENT_DETAILS}" >> $GITHUB_ENV
+             MESSAGE_COLOR="${{ env.COLOR_UNKNOWN }}"
+          fi
+
+          # Set the final color environment variable for the payload
+          echo "COLOR=${MESSAGE_COLOR}" >> $GITHUB_ENV
+
+          # Set current Unix timestamp for the message if it hasn't been set (only set for initial PR creation)
+          # This ensures subsequent replies use the current timestamp.
+          if [ -z "${{ env.TIMESTAMP }}" ]; then
+             echo "TIMESTAMP=$(date +%s)" >> $GITHUB_ENV
+          fi
+
+
+      # Set Slack payload title and link environment variables
+      - name: Set Slack payload title and link
+        id: set-payload-details
+        run: |
+          # Determine the title, number, and link for the Slack message payload
+          # These appear as the main link/headline in the Slack attachment
+
+          PAYLOAD_TITLE=""
+          PAYLOAD_NUMBER=""
+          PAYLOAD_TITLE_LINK=""
+
+          if [[ "${{ github.event_name }}" == "discussion" || "${{ github.event_name }}" == "discussion_comment" ]]; then
+            # For Discussion related events, link to the discussion or the specific comment/answer
+            PAYLOAD_TITLE="${{ github.event.discussion.title }}"
+            PAYLOAD_NUMBER="${{ github.event.discussion.number }}"
+            # Prioritize linking directly to the comment/answer if available and relevant
+            if [[ "${{ github.event_name }}" == "discussion_comment" ]]; then
+                PAYLOAD_TITLE_LINK="${{ github.event.comment.html_url }}"
+            elif [[ "${{ github.event.action }}" == "answered" && github.event.discussion.answer_html_url ]]; then
+                 PAYLOAD_TITLE_LINK="${{ github.event.discussion.answer_html_url }}"
+            else
+                PAYLOAD_TITLE_LINK="${{ github.event.discussion.html_url }}"
+            fi
+
+          elif [[ "${{ env.ENTITY_NUMBER }}" ]]; then
+             # For PR related events, link to the Pull Request
+             PAYLOAD_TITLE="${{ github.event.pull_request.title }}"
+             PAYLOAD_NUMBER="${{ github.event.pull_request.number }}"
+             PAYLOAD_TITLE_LINK="${{ github.event.pull_request.html_url }}"
+          fi
+
+          # Only set environment variables if we successfully determined the details
+          if [ -n "$PAYLOAD_TITLE_LINK" ]; then
+            echo "PAYLOAD_TITLE=${PAYLOAD_TITLE}" >> $GITHUB_ENV
+            echo "PAYLOAD_NUMBER=${PAYLOAD_NUMBER}" >> $GITHUB_ENV
+            echo "PAYLOAD_TITLE_LINK=${PAYLOAD_TITLE_LINK}" >> $GITHUB_ENV
+             echo "Payload details set: Title='${PAYLOAD_TITLE}', Number='${PAYLOAD_NUMBER}', Link='${PAYLOAD_TITLE_LINK}'"
+          else
+             echo "Could not determine payload title/link for event ${{ github.event_name }}. Sending minimal payload details."
+             # These environment variables will remain empty, the Slack payload uses fallbacks
+          fi
+
+
+      # Send the Slack notification. It will be a reply if THREAD_TS was found, otherwise stand-alone.
+      - name: Send Slack notification
         id: send-notification
         uses: slackapi/slack-github-action@v2.0.0
         env:
-          SLACK_WEBHOOK_URL: ${{ vars.SLACK_INCOMING_WEBHOOK_URL }}
+          # Use the webhook URL for sending messages
+          SLACK_WEBHOOK_URL: ${{ env.SLACK_INCOMING_WEBHOOK_URL }}
+          # The slackapi action might also need the main SLACK_TOKEN for some features.
+          SLACK_TOKEN: ${{ env.SLACK_TOKEN }} # Pass primary token to the action
+          # Pass the found THREAD_TS to the action if it exists
+          THREAD_TS: ${{ env.THREAD_TS }}
+
         with:
           payload: |
             {
               "channel": "${{ env.SLACK_CHANNEL }}",
+              # Conditionally include thread_ts ONLY if found and not empty/null
+              # The slackapi action will handle the absence of thread_ts by sending a top-level message.
+              ${{ env.FOUND_THREAD == 'true' && env.THREAD_TS != '' && env.THREAD_TS != 'null' ? format('"thread_ts": "{0}"', env.THREAD_TS) : '' }}
+
               "attachments": [
                 {
-                  "color": "${{ env.COLOR }}",
-                  "pretext": "*${{ github.repository }}*",
-                  "title": "${{ env.TITLE }} #${{ env.NUMBER }}",
-                  "title_link": "${{ env.TITLE_LINK }}",
-                  "text": "${{ env.MESSAGE }}",
-                  "footer": "GitHub Actions • Thread-Key: ${{ env.THREAD_KEY }}",
+                  "color": "${{ env.COLOR }}", # Use the color determined earlier
+                  # Include payload details set in the previous step.
+                  # Fallback to minimal title/link if primary ones weren't set.
+                  ${{ env.PAYLOAD_TITLE_LINK != '' ? format('"pretext": "*{0}*", "title": "{1} #{2}", "title_link": "{3}"', github.repository, env.PAYLOAD_TITLE, env.PAYLOAD_NUMBER, env.PAYLOAD_TITLE_LINK) : (env.ENTITY_NUMBER != '' ? format('"pretext": "*{0}*", "title": "Notification for #{1}"', github.repository, env.ENTITY_NUMBER) : format('"pretext": "*{0}*", "title": "GitHub Notification"', github.repository)) }}
+
+                  "text": "${{ env.MESSAGE }}", # Use the message text determined earlier
+                  "footer": "GitHub Actions • Entity: ${{ env.ENTITY_KEY }}" , # Include entity key in footer
                   "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
                   "mrkdwn_in": ["text", "pretext", "footer"],
-                  "ts": "${{ env.TIMESTAMP }}"
+                  "ts": "${{ env.TIMESTAMP }}" # Use the generated timestamp for the message
                 }
               ]
             }
-          webhook-type: incoming-webhook
+          webhook-type: incoming-webhook # Specify webhook type
 
-      # Store thread info in PR comment - using GitHub API directly instead of parsing Slack response
-      - name: Store thread information
-        id: store-thread-info
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Create a comment on the PR that includes thread information
-          # We can't easily get the timestamp from Slack response, so we'll use a marker comment
-          # that other events can search for
-          gh api --method POST /repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments \
-            -f body="${{ env.THREAD_COMMENT_PREFIX }} ${{ env.THREAD_KEY }} ${{ env.THREAD_COMMENT_SUFFIX }}"
-          
-          echo "Thread information stored in PR comment"
-
-  # Job for all other PR events
-  notify_other_events:
-    name: Notify Other Events
-    if: github.event_name != 'pull_request' || github.event.action != 'opened'
-    environment:
-      name: Production
-    runs-on: ubuntu-latest
-    # Add a delay to ensure the PR creation job finishes first
-    # This helps ensure that the thread information is available
-    steps:
-      - name: Wait for potential PR creation job to complete
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "labeled" || 
-                "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "assigned" ||
-                "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "review_requested" ]]; then
-            echo "This might be a simultaneous event with PR creation, waiting a bit..."
-            sleep 5
-          fi
-
-      - name: Create thread identifier
-        id: create-thread-id
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "pull_request_review" || "${{ github.event_name }}" == "pull_request_review_comment" ]]; then
-            THREAD_KEY="${{ github.repository }}-pr-${{ github.event.pull_request.number }}"
-            echo "THREAD_KEY=${THREAD_KEY}" >> $GITHUB_ENV
-            echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
-            echo "Created thread key: ${THREAD_KEY}"
-          elif [[ "${{ github.event_name }}" == "discussion" || "${{ github.event_name }}" == "discussion_comment" ]]; then
-            THREAD_KEY="${{ github.repository }}-discussion-${{ github.event.discussion.number }}"
-            echo "THREAD_KEY=${THREAD_KEY}" >> $GITHUB_ENV
-            echo "Created thread key: ${THREAD_KEY}"
-          fi
-
-      # Find thread info from PR comments
-      - name: Find thread info in PR comments
-        if: github.event_name == 'pull_request' || github.event_name == 'pull_request_review' || github.event_name == 'pull_request_review_comment'
-        id: find-thread-info
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Get PR comments
-          COMMENTS=$(gh api /repos/${{ github.repository }}/issues/${{ env.PR_NUMBER }}/comments)
-          
-          # Look for our marker comment with thread info
-          THREAD_COMMENT=$(echo "$COMMENTS" | jq -r '.[] | select(.body | contains("'"${{ env.THREAD_COMMENT_PREFIX }}"'")) | .body')
-          
-          if [ -n "$THREAD_COMMENT" ]; then
-            echo "Found thread marker comment: $THREAD_COMMENT"
-            echo "FOUND_THREAD=true" >> $GITHUB_ENV
-          else
-            echo "No thread marker comment found"
-            echo "FOUND_THREAD=false" >> $GITHUB_ENV
-          fi
-
-      # If no thread info found, we need to search Slack
-      - name: Search Slack for existing thread
-        if: env.FOUND_THREAD != 'true'
-        id: search-slack
-        env:
-          SLACK_TOKEN: ${{ secrets.SLACK_USER_OAUTH_TOKEN }}
-        run: |
-          # Format a search query to find messages about this PR using the thread key
-          THREAD_KEY="${{ env.THREAD_KEY }}"
-          SEARCH_QUERY="in:${{ env.SLACK_CHANNEL }} \"${THREAD_KEY}\""
-          
-          echo "Searching for existing messages with query: $SEARCH_QUERY"
-          
-          # Search for messages
-          SEARCH_RESPONSE=$(curl -s -X POST \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            -H "Authorization: Bearer $SLACK_TOKEN" \
-            --data-urlencode "query=$SEARCH_QUERY" \
-            --data-urlencode "sort=timestamp" \
-            --data-urlencode "sort_dir=asc" \
-            --data-urlencode "count=1" \
-            "https://slack.com/api/search.messages")
-          
-          # Check if we found a message
-          TOTAL_MATCHES=$(echo $SEARCH_RESPONSE | jq -r '.messages.total')
-          
-          if [ "$TOTAL_MATCHES" -gt 0 ]; then
-            # Get the timestamp of the first message (should be the original PR notification)
-            THREAD_TS=$(echo $SEARCH_RESPONSE | jq -r '.messages.matches[0].ts')
-            echo "Found existing message with timestamp: $THREAD_TS"
-            echo "THREAD_TS=$THREAD_TS" >> $GITHUB_ENV
-            echo "FOUND_THREAD=true" >> $GITHUB_ENV
-          else
-            echo "No existing messages found for this PR"
-            echo "FOUND_THREAD=false" >> $GITHUB_ENV
-          fi
-
-      # For synchronize events, fetch the latest commit message using GitHub API
-      - name: Get commit message for synchronize event
-        if: github.event_name == 'pull_request' && github.event.action == 'synchronize'
-        id: get-commit-message
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Get the head commit SHA
-          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-          
-          # Use GitHub CLI to get commit info
-          COMMIT_INFO=$(gh api repos/${{ github.repository }}/commits/${HEAD_SHA})
-          
-          # Extract the commit message
-          COMMIT_MSG=$(echo $COMMIT_INFO | jq -r '.commit.message')
-          
-          # Escape newlines and other special chars for GitHub Actions
-          COMMIT_MSG=$(echo "$COMMIT_MSG" | tr '\n' ' ' | sed 's/"/\\"/g')
-          
-          # Set output - save commit message in a way that handles multiline messages
-          echo "COMMIT_MESSAGE<<EOF" >> $GITHUB_ENV
-          echo "$COMMIT_MSG" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-          
-          # For debugging
-          echo "Retrieved commit message for SHA: ${HEAD_SHA}"
-
-      # Handle different types of PR events
-      - name: Set event message
-        id: event-message
-        run: |
-          # Common PR details that will be included in most messages
-          if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "pull_request_review" || "${{ github.event_name }}" == "pull_request_review_comment" ]]; then
-            PR_DETAILS="*Title:* ${{ github.event.pull_request.title }}\n*Branch:* ${{ github.event.pull_request.head.ref }} → ${{ github.event.pull_request.base.ref }}\n*Author:* ${{ github.event.pull_request.user.login }}\n*Created:* $(date -d "${{ github.event.pull_request.created_at }}" "+%Y-%m-%d %H:%M:%S UTC")"
-          fi
-          
-          if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "closed" && "${{ github.event.pull_request.merged }}" == "true" ]]; then
-            # Details for merged PR
-            MERGE_DETAILS="*Merged by:* ${{ github.event.sender.login }}\n*Merge time:* $(date -d "${{ github.event.pull_request.merged_at }}" "+%Y-%m-%d %H:%M:%S UTC")"
-            echo "MESSAGE=🥳 *IT'S GIVING MERGED!*\n\n${PR_DETAILS}\n\n${MERGE_DETAILS}" >> $GITHUB_ENV
-            echo "COLOR=${{ env.COLOR_PR_MERGED }}" >> $GITHUB_ENV
-            
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "closed" ]]; then
-            # Details for closed PR without merging
-            CLOSE_DETAILS="*Closed by:* ${{ github.event.sender.login }}\n*Close time:* $(date -d "${{ github.event.pull_request.closed_at }}" "+%Y-%m-%d %H:%M:%S UTC")"
-            echo "MESSAGE=💀 *YIKES, PR GOT CANCELED*\n\n${PR_DETAILS}\n\n${CLOSE_DETAILS}" >> $GITHUB_ENV
-            echo "COLOR=${{ env.COLOR_PR_CLOSED }}" >> $GITHUB_ENV
-            
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "reopened" ]]; then
-            # Details for reopened PR
-            REOPEN_DETAILS="*Reopened by:* ${{ github.event.sender.login }}\n*Reopen time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
-            echo "MESSAGE=🧟 *PR BACK FROM THE DEAD FR FR*\n\n${PR_DETAILS}\n\n${REOPEN_DETAILS}" >> $GITHUB_ENV
-            echo "COLOR=${{ env.COLOR_PR_REOPENED }}" >> $GITHUB_ENV
-            
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "synchronize" ]]; then
-            # For synchronize events
-            echo "MESSAGE=✨ *NEW COMMIT JUST DROPPED*\n\n*Commit SHA:* \`${{ github.event.pull_request.head.sha }}\`\n*Commit message:* ${{ env.COMMIT_MESSAGE }}" >> $GITHUB_ENV
-            echo "COLOR=${{ env.COLOR_PR_SYNCHRONIZED }}" >> $GITHUB_ENV
-
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "edited" ]]; then
-            # Details for edited PR
-            EDIT_DETAILS="*Edited by:* ${{ github.event.sender.login }}\n*Edit time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
-            # Check what was edited
-            if [[ "${{ github.event.changes.title }}" != "" ]]; then
-              EDIT_DETAILS="${EDIT_DETAILS}\n*Title changed:* ${{ github.event.changes.title.from }} → ${{ github.event.pull_request.title }}"
-            fi
-            if [[ "${{ github.event.changes.body }}" != "" ]]; then
-              EDIT_DETAILS="${EDIT_DETAILS}\n*Description edited*"
-            fi
-            echo "MESSAGE=✏️ *PR GOT A GLOW UP*\n\n${PR_DETAILS}\n\n${EDIT_DETAILS}" >> $GITHUB_ENV
-            echo "COLOR=${{ env.COLOR_UNKNOWN }}" >> $GITHUB_ENV
-
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "converted_to_draft" ]]; then
-            # Details for draft conversion
-            DRAFT_DETAILS="*Converted by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
-            echo "MESSAGE=⏳ *LOWKEY NOT READY YET, MARKED AS DRAFT*\n\n${PR_DETAILS}\n\n${DRAFT_DETAILS}" >> $GITHUB_ENV
-            echo "COLOR=${{ env.COLOR_PR_DRAFT }}" >> $GITHUB_ENV
-
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "ready_for_review" ]]; then
-            # Details for ready for review
-            READY_DETAILS="*Marked ready by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
-            echo "MESSAGE=✅ *BIG SLAY! CODE LOOKS FIRE*\n\n${PR_DETAILS}\n\n${READY_DETAILS}" >> $GITHUB_ENV
-            echo "COLOR=${{ env.COLOR_PR_READY }}" >> $GITHUB_ENV
-
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "assigned" ]]; then
-            # Details for assigned PR
-            ASSIGN_DETAILS="*Assigned to:* ${{ github.event.assignee.login }}\n*Assigned by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
-            echo "MESSAGE=👉 *THIS ONE'S YOURS NOW, NO CAP*\n\n${PR_DETAILS}\n\n${ASSIGN_DETAILS}" >> $GITHUB_ENV
-            echo "COLOR=${{ env.COLOR_PR_ASSIGNED }}" >> $GITHUB_ENV
-
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "unassigned" ]]; then
-            # Details for unassigned PR
-            UNASSIGN_DETAILS="*Unassigned from:* ${{ github.event.assignee.login }}\n*Unassigned by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
-            echo "MESSAGE=🙅 *SIKE! NOT YOUR PROBLEM ANYMORE*\n\n${PR_DETAILS}\n\n${UNASSIGN_DETAILS}" >> $GITHUB_ENV
-            echo "COLOR=${{ env.COLOR_PR_ASSIGNED }}" >> $GITHUB_ENV
-
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "labeled" ]]; then
-            # Details for labeled PR
-            LABEL_DETAILS="*Label added:* ${{ github.event.label.name }}\n*Added by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
-            echo "MESSAGE=🏷️ *VIBE CHECK: NEW LABEL ADDED*\n\n${PR_DETAILS}\n\n${LABEL_DETAILS}" >> $GITHUB_ENV
-            echo "COLOR=${{ env.COLOR_PR_LABELED }}" >> $GITHUB_ENV
-
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "unlabeled" ]]; then
-            # Details for unlabeled PR
-            UNLABEL_DETAILS="*Label removed:* ${{ github.event.label.name }}\n*Removed by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
-            echo "MESSAGE=✂️ *LABEL GOT YEETED*\n\n${PR_DETAILS}\n\n${UNLABEL_DETAILS}" >> $GITHUB_ENV
-            echo "COLOR=${{ env.COLOR_PR_LABELED }}" >> $GITHUB_ENV
-
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "review_requested" ]]; then
-            # Details for review request
-            REVIEWER=""
-            if [[ -n "${{ github.event.requested_reviewer.login }}" ]]; then
-              REVIEWER="${{ github.event.requested_reviewer.login }}"
-            elif [[ -n "${{ github.event.requested_team.name }}" ]]; then
-              REVIEWER="team ${{ github.event.requested_team.name }}"
-            fi
-            REVIEW_DETAILS="*Reviewer:* ${REVIEWER}\n*Requested by:* ${{ github.event.sender.login }}\n*Time:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
-            echo "MESSAGE=💯 *NEED UR EYES ON THIS, FAM*\n\n${PR_DETAILS}\n\n${REVIEW_DETAILS}" >> $GITHUB_ENV
-            echo "COLOR=${{ env.COLOR_PR_REVIEW }}" >> $GITHUB_ENV
-
-          elif [[ "${{ github.event_name }}" == "pull_request_review" && "${{ github.event.action }}" == "submitted" ]]; then
-            # Details for PR review with different icons based on state
-            REVIEW_STATE="${{ github.event.review.state }}"
-            REVIEW_ICON="💬"
-            REVIEW_PREFIX="*THOUGHTS DROPPED*"
-            
-            if [[ "${REVIEW_STATE}" == "approved" ]]; then
-              REVIEW_ICON="✅"
-              REVIEW_PREFIX="*BIG SLAY! CODE APPROVED*"
-            elif [[ "${REVIEW_STATE}" == "changes_requested" ]]; then
-              REVIEW_ICON="❌"
-              REVIEW_PREFIX="*YIKES, FIX UR CODE PLS*"
-            fi
-            
-            # Get truncated review body
-            REVIEW_BODY="${{ github.event.review.body }}"
-            
-            if [ ${#REVIEW_BODY} -gt 150 ]; then
-              TRUNCATED_REVIEW="${REVIEW_BODY:0:150}..."
-            else
-              TRUNCATED_REVIEW="$REVIEW_BODY"
-            fi
-            
-            REVIEW_DETAILS="*Reviewer:* ${{ github.event.review.user.login }}\n*State:* ${REVIEW_STATE}\n*Time:* $(date -d "${{ github.event.review.submitted_at }}" "+%Y-%m-%d %H:%M:%S UTC")"
-            if [[ -n "${TRUNCATED_REVIEW}" ]]; then
-              REVIEW_DETAILS="${REVIEW_DETAILS}\n*Comment:* ${TRUNCATED_REVIEW}"
-            fi
-            
-            echo "MESSAGE=${REVIEW_ICON} ${REVIEW_PREFIX}\n\n${PR_DETAILS}\n\n${REVIEW_DETAILS}" >> $GITHUB_ENV
-            echo "COLOR=${{ env.COLOR_PR_REVIEW }}" >> $GITHUB_ENV
-
-          elif [[ "${{ github.event_name }}" == "pull_request_review_comment" ]]; then
-            # Details for PR review comment
-            COMMENT="${{ github.event.comment.body }}"
-            
-            if [ ${#COMMENT} -gt 150 ]; then
-              TRUNCATED_COMMENT="${COMMENT:0:150}..."
-            else
-              TRUNCATED_COMMENT="$COMMENT"
-            fi
-            
-            # Fix for the bad substitution error by using an if statement
-            PATH_WITH_LINE="${{ github.event.comment.path }}"
-            if [[ -n "${{ github.event.comment.line }}" ]]; then
-              PATH_WITH_LINE="${{ github.event.comment.path }}:${{ github.event.comment.line }}"
-            fi
-            
-            COMMENT_DETAILS="*Commenter:* ${{ github.event.comment.user.login }}\n*Time:* $(date -d "${{ github.event.comment.created_at }}" "+%Y-%m-%d %H:%M:%S UTC")\n*Path:* ${PATH_WITH_LINE}"
-            
-            VERB="DROPPED"
-            PREFIX="*NEW COMMENT JUST DROPPED*"
-            if [[ "${{ github.event.action }}" == "edited" ]]; then
-              VERB="EDITED"
-              PREFIX="*COMMENT GOT EDITED*"
-              COMMENT_DETAILS="${COMMENT_DETAILS}\n*Edited at:* $(date "+%Y-%m-%d %H:%M:%S UTC")"
-            elif [[ "${{ github.event.action }}" == "deleted" ]]; then
-              VERB="DELETED"
-              PREFIX="*COMMENT GOT DELETED*"
-            fi
-            
-            if [[ "${{ github.event.action }}" != "deleted" ]]; then
-              COMMENT_DETAILS="${COMMENT_DETAILS}\n*Comment:* ${TRUNCATED_COMMENT}"
-            fi
-            
-            echo "MESSAGE=💬 ${PREFIX}\n\n${PR_DETAILS}\n\n${COMMENT_DETAILS}" >> $GITHUB_ENV
-            echo "COLOR=${{ env.COLOR_PR_COMMENT }}" >> $GITHUB_ENV
-
-          elif [[ "${{ github.event_name }}" == "discussion" || "${{ github.event_name }}" == "discussion_comment" ]]; then
-            # Handle Discussion events
-            DISCUSSION_TITLE="${{ github.event.discussion.title }}"
-            DISCUSSION_URL="${{ github.event.discussion.html_url }}"
-            DISCUSSION_NUMBER="${{ github.event.discussion.number }}"
-            
-            DISCUSSION_DETAILS="*Title:* ${DISCUSSION_TITLE}\n*URL:* ${DISCUSSION_URL}\n*Author:* ${{ github.event.discussion.user.login }}"
-            
-            DISCUSSION_ACTION="${{ github.event.action }}"
-            ACTION_ICON="💬"
-            PREFIX="*DISCUSSION VIBES*"
-            
-            if [[ "${DISCUSSION_ACTION}" == "created" ]]; then
-              ACTION_ICON="🆕"
-              PREFIX="*NEW DISCUSSION JUST DROPPED*"
-            elif [[ "${DISCUSSION_ACTION}" == "answered" ]]; then
-              ACTION_ICON="✅"
-              PREFIX="*GOT THE ANSWER, NO CAP*"
-            elif [[ "${DISCUSSION_ACTION}" == "unanswered" ]]; then
-              ACTION_ICON="❓"
-              PREFIX="*STILL LOOKING FOR ANSWERS*"
-            fi
-            
-            # For comment events
-            if [[ "${{ github.event_name }}" == "discussion_comment" ]]; then
-              COMMENT="${{ github.event.comment.body }}"
-              
-              if [ ${#COMMENT} -gt 150 ]; then
-                TRUNCATED_COMMENT="${COMMENT:0:150}..."
-              else
-                TRUNCATED_COMMENT="$COMMENT"
-              fi
-              
-              COMMENT_VERB="DROPPED"
-              if [[ "${{ github.event.action }}" == "edited" ]]; then
-                COMMENT_VERB="EDITED"
-              elif [[ "${{ github.event.action }}" == "deleted" ]]; then
-                COMMENT_VERB="DELETED"
-              fi
-              
-              DISCUSSION_DETAILS="${DISCUSSION_DETAILS}\n*Comment ${COMMENT_VERB} by:* ${{ github.event.comment.user.login }}\n*Time:* $(date -d "${{ github.event.comment.created_at }}" "+%Y-%m-%d %H:%M:%S UTC")"
-              
-              if [[ "${{ github.event.action }}" != "deleted" ]]; then
-                DISCUSSION_DETAILS="${DISCUSSION_DETAILS}\n*Comment:* ${TRUNCATED_COMMENT}"
-              fi
-              
-              echo "MESSAGE=${ACTION_ICON} *DISCUSSION COMMENT ${COMMENT_VERB}*\n\n${DISCUSSION_DETAILS}" >> $GITHUB_ENV
-            else
-              echo "MESSAGE=${ACTION_ICON} ${PREFIX}\n\n${DISCUSSION_DETAILS}" >> $GITHUB_ENV
-            fi
-            
-            echo "COLOR=${{ env.COLOR_UNKNOWN }}" >> $GITHUB_ENV
-            
-          else
-            # Unknown events
-            echo "MESSAGE=👽 *SOMETHING WEIRD HAPPENED, TBH*\n\n${PR_DETAILS}" >> $GITHUB_ENV
-            echo "COLOR=${{ env.COLOR_UNKNOWN }}" >> $GITHUB_ENV
-          fi
-
-          # Set current Unix timestamp for the message
-          echo "TIMESTAMP=$(date +%s)" >> $GITHUB_ENV
-
-      # Send to Slack with thread_ts when it's a reply
-      - name: Set Slack title and link environment variables
-        run: |
-          if [[ "${{ github.event_name }}" == "discussion" || "${{ github.event_name }}" == "discussion_comment" ]]; then
-            echo "TITLE=${{ github.event.discussion.title }}" >> $GITHUB_ENV
-            echo "NUMBER=${{ github.event.discussion.number }}" >> $GITHUB_ENV
-            echo "TITLE_LINK=${{ github.event.discussion.html_url }}" >> $GITHUB_ENV
-          else
-            echo "TITLE=${{ github.event.pull_request.title }}" >> $GITHUB_ENV
-            echo "NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
-            echo "TITLE_LINK=${{ github.event.pull_request.html_url }}" >> $GITHUB_ENV
-          fi
-
-      # Send as stand-alone message if thread not found
-      - name: Send Slack notification as stand-alone message
-        if: env.FOUND_THREAD != 'true'
-        uses: slackapi/slack-github-action@v2.0.0
-        env:
-          SLACK_WEBHOOK_URL: ${{ vars.SLACK_INCOMING_WEBHOOK_URL }}
-        with:
-          payload: |
-            {
-              "channel": "${{ env.SLACK_CHANNEL }}",
-              "attachments": [
-                {
-                  "color": "${{ env.COLOR }}",
-                  "pretext": "*${{ github.repository }}*",
-                  "title": "${{ env.TITLE }} #${{ env.NUMBER }}",
-                  "title_link": "${{ env.TITLE_LINK }}",
-                  "text": "${{ env.MESSAGE }}",
-                  "footer": "GitHub Actions • Thread-Key: ${{ env.THREAD_KEY }}",
-                  "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
-                  "mrkdwn_in": ["text", "pretext", "footer"],
-                  "ts": "${{ env.TIMESTAMP }}"
-                }
-              ]
-            }
-          webhook-type: incoming-webhook
-      # Send as reply if thread found
-      - name: Send Slack notification as reply
-        if: env.FOUND_THREAD == 'true'
-        uses: slackapi/slack-github-action@v2.0.0
-        env:
-          SLACK_WEBHOOK_URL: ${{ vars.SLACK_INCOMING_WEBHOOK_URL }}
-        with:
-          payload: |
-            {
-              "channel": "${{ env.SLACK_CHANNEL }}",
-              "thread_ts": "${{ env.THREAD_TS }}",
-              "attachments": [
-                {
-                  "color": "${{ env.COLOR }}",
-                  "pretext": "*${{ github.repository }}*",
-                  "title": "${{ env.TITLE }} #${{ env.NUMBER }}",
-                  "title_link": "${{ env.TITLE_LINK }}",
-                  "text": "${{ env.MESSAGE }}",
-                  "footer": "GitHub Actions • Thread-Key: ${{ env.THREAD_KEY }}",
-                  "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
-                  "mrkdwn_in": ["text", "pretext", "footer"],
-                  "ts": "${{ env.TIMESTAMP }}"
-                }
-              ]
-            }
-          webhook-type: incoming-webhook
-      # For debugging
+      # For debugging - helpful to see what was set and sent
       - name: Debugging information
         run: |
           echo "Event Name: ${{ github.event_name }}"
           echo "Event Action: ${{ github.event.action }}"
-          echo "Message: ${{ env.MESSAGE }}"
+          echo "Entity Key: ${{ env.ENTITY_KEY }}"
+          echo "Entity Number: ${{ env.ENTITY_NUMBER }}"
+          echo "Message (first 200 chars): ${MESSAGE:0:200}..." # Print truncated message
           echo "Color: ${{ env.COLOR }}"
-          echo "Thread Key: ${{ env.THREAD_KEY }}"
-          echo "Thread Found: ${{ env.FOUND_THREAD }}"
+          echo "Found Thread: ${{ env.FOUND_THREAD }}"
           echo "Thread Timestamp: ${{ env.THREAD_TS }}"
-          echo "Payload sent to Slack:"
-          echo "${{ toJson(github.event) }}"
+          echo "Payload Title: ${{ env.PAYLOAD_TITLE }}"
+          echo "Payload Number: ${{ env.PAYLOAD_NUMBER }}"
+          echo "Payload Link: ${{ env.PAYLOAD_TITLE_LINK }}"
+          echo "Timestamp (for slack): ${{ env.TIMESTAMP }}"
+          # Uncomment the line below for very verbose debugging, showing the full event payload
+          # echo "Full event payload:"
+          # echo "${{ toJson(github.event) }}"

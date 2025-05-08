@@ -705,14 +705,26 @@ jobs:
               "channel": "${{ env.SLACK_CHANNEL }}",
               # Conditionally include thread_ts ONLY if found and not empty/null
               # The slackapi action will handle the absence of thread_ts by sending a top-level message.
-              ${{ env.FOUND_THREAD == 'true' && env.THREAD_TS != '' && env.THREAD_TS != 'null' ? format('"thread_ts": "{0}"', env.THREAD_TS) : '' }}
+              {% if env.FOUND_THREAD == 'true' and env.THREAD_TS != '' and env.THREAD_TS != 'null' %}
+              "thread_ts": "${{ env.THREAD_TS }}",
+              {% endif %}
 
               "attachments": [
                 {
                   "color": "${{ env.COLOR }}", # Use the color determined earlier
                   # Include payload details set in the previous step.
                   # Fallback to minimal title/link if primary ones weren't set.
-                  ${{ env.PAYLOAD_TITLE_LINK != '' ? format('"pretext": "*{0}*", "title": "{1} #{2}", "title_link": "{3}"', github.repository, env.PAYLOAD_TITLE, env.PAYLOAD_NUMBER, env.PAYLOAD_TITLE_LINK) : (env.ENTITY_NUMBER != '' ? format('"pretext": "*{0}*", "title": "Notification for #{1}"', github.repository, env.ENTITY_NUMBER) : format('"pretext": "*{0}*", "title": "GitHub Notification"', github.repository)) }}
+                  {% if env.PAYLOAD_TITLE_LINK != '' %}
+                  "pretext": "*{{ github.repository }}*",
+                  "title": "{{ env.PAYLOAD_TITLE }} #{{ env.PAYLOAD_NUMBER }}",
+                  "title_link": "{{ env.PAYLOAD_TITLE_LINK }}"
+                  {% elif env.ENTITY_NUMBER != '' %}
+                  "pretext": "*{{ github.repository }}*",
+                  "title": "Notification for #{{ env.ENTITY_NUMBER }}"
+                  {% else %}
+                  "pretext": "*{{ github.repository }}*",
+                  "title": "GitHub Notification"
+                  {% endif %}
 
                   "text": "${{ env.MESSAGE }}", # Use the message text determined earlier
                   "footer": "GitHub Actions • Entity: ${{ env.ENTITY_KEY }}" , # Include entity key in footer

@@ -148,7 +148,7 @@ jobs:
           # Send the message using curl with form-urlencoded data
           RESPONSE=$(curl -s -X POST \
             "${{ env.SLACK_API_URL }}" \
-            -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
+            -H "Authorization: Bearer ${{ secrets.SLACK_USER_OAUTH_TOKEN }}" \
             -H "Content-Type: application/x-www-form-urlencoded" \
             --data-urlencode "channel=${{ env.SLACK_CHANNEL_ID }}" \
             --data-urlencode "attachments=$ATTACHMENTS" \
@@ -578,7 +578,7 @@ jobs:
           # Base curl command with common parameters
           CURL_CMD="curl -s -X POST \
             \"${{ env.SLACK_API_URL }}\" \
-            -H \"Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}\" \
+            -H \"Authorization: Bearer ${{ secrets.SLACK_USER_OAUTH_TOKEN }}\" \
             -H \"Content-Type: application/x-www-form-urlencoded\" \
             --data-urlencode \"channel=${{ env.SLACK_CHANNEL_ID }}\" \
             --data-urlencode \"attachments=$ATTACHMENTS\" \

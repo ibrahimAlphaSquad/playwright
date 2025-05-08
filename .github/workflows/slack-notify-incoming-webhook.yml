@@ -168,10 +168,10 @@ jobs:
             echo "THREAD_TS=$RESPONSE_TS" >> $GITHUB_ENV
             
             # Create a file with the thread_ts for artifact upload
-            echo "$RESPONSE_TS" > pr-thread-ts.txt
+            echo "$RESPONSE_TS" > thread-ts.txt
             
             # Debug output
-            echo "Created file pr-thread-ts.txt with content: $RESPONSE_TS"
+            echo "Created file thread-ts.txt with content: $RESPONSE_TS"
           else
             echo "Failed to get thread_ts from Slack API response"
             echo "Response: $RESPONSE"
@@ -189,7 +189,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pr-${{ github.event.pull_request.number }}-thread-ts
-          path: pr-thread-ts.txt
+          path: thread-ts.txt
           retention-days: 90
 
   # Job 2: Handle all other PR and Discussion events
@@ -239,31 +239,52 @@ jobs:
             echo "THREAD_KEY=${THREAD_KEY}" >> $GITHUB_ENV
             echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
             echo "Created thread key: ${THREAD_KEY}"
+            
+            # Set PR-specific environment variables
+            echo "EVENT_ID=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+            echo "EVENT_TYPE=pr" >> $GITHUB_ENV
           elif [[ "${{ github.event_name }}" == "discussion" || "${{ github.event_name }}" == "discussion_comment" ]]; then
-            # Similarly for discussions
-            THREAD_KEY="${{ github.repository }}-discussion-${{ github.event.discussion.number }}"
+            # Get the PR number from the discussion (if it exists)
+            # Note: This assumes your discussions are related to PRs and include the PR number in the title or body
+            # Adjust this logic based on how your discussions are structured
+            
+            # First check if this is a PR discussion (title contains "PR #X" or similar)
+            DISCUSSION_TITLE="${{ github.event.discussion.title }}"
+            DISCUSSION_BODY="${{ github.event.discussion.body }}"
+            
+            # Try to extract PR number from title or body using regex
+            if [[ "$DISCUSSION_TITLE" =~ PR[[:space:]]*#([0-9]+) ]]; then
+              PR_NUMBER="${BASH_REMATCH[1]}"
+              echo "Found PR number $PR_NUMBER in discussion title"
+              echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+              echo "EVENT_ID=$PR_NUMBER" >> $GITHUB_ENV
+              echo "EVENT_TYPE=pr" >> $GITHUB_ENV
+              THREAD_KEY="${{ github.repository }}-pr-$PR_NUMBER"
+            elif [[ "$DISCUSSION_BODY" =~ PR[[:space:]]*#([0-9]+) ]]; then
+              PR_NUMBER="${BASH_REMATCH[1]}"
+              echo "Found PR number $PR_NUMBER in discussion body"
+              echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+              echo "EVENT_ID=$PR_NUMBER" >> $GITHUB_ENV
+              echo "EVENT_TYPE=pr" >> $GITHUB_ENV
+              THREAD_KEY="${{ github.repository }}-pr-$PR_NUMBER"
+            else
+              # No PR reference found, use the discussion number for the thread key
+              THREAD_KEY="${{ github.repository }}-discussion-${{ github.event.discussion.number }}"
+              echo "DISCUSSION_NUMBER=${{ github.event.discussion.number }}" >> $GITHUB_ENV
+              echo "EVENT_ID=${{ github.event.discussion.number }}" >> $GITHUB_ENV
+              echo "EVENT_TYPE=discussion" >> $GITHUB_ENV
+            fi
+            
+            echo "Created thread key: ${THREAD_KEY}" 
             echo "THREAD_KEY=${THREAD_KEY}" >> $GITHUB_ENV
-            echo "DISCUSSION_NUMBER=${{ github.event.discussion.number }}" >> $GITHUB_ENV
-            echo "Created thread key: ${THREAD_KEY}"
           fi
 
-      # Download thread_ts for PR events from artifacts
-      - name: Download thread timestamp for PR events
-        if: github.event_name == 'pull_request' || github.event_name == 'pull_request_review' || github.event_name == 'pull_request_review_comment'
-        id: download-ts-pr
+      # Download thread_ts from artifacts
+      - name: Download thread timestamp
+        id: download-ts
         uses: actions/download-artifact@v4
         with:
-          name: pr-${{ github.event.pull_request.number }}-thread-ts
-          path: ./
-        continue-on-error: true  # Continue if artifact doesn't exist yet
-
-      # Download thread_ts for Discussion events from artifacts
-      - name: Download thread timestamp for Discussion events
-        if: github.event_name == 'discussion' || github.event_name == 'discussion_comment'
-        id: download-ts-discussion
-        uses: actions/download-artifact@v4
-        with:
-          name: discussion-${{ github.event.discussion.number }}-thread-ts
+          name: ${{ env.EVENT_TYPE }}-${{ env.EVENT_ID }}-thread-ts
           path: ./
         continue-on-error: true  # Continue if artifact doesn't exist yet
 
@@ -271,13 +292,8 @@ jobs:
       - name: Load thread timestamp
         id: load-ts
         run: |
-          if [ -f "pr-thread-ts.txt" ]; then
-            THREAD_TS=$(cat pr-thread-ts.txt)
-            echo "THREAD_TS=${THREAD_TS}" >> $GITHUB_ENV
-            echo "IS_THREADED_REPLY=true" >> $GITHUB_ENV
-            echo "Found existing thread_ts: ${THREAD_TS}"
-          elif [ -f "discussion-thread-ts.txt" ]; then
-            THREAD_TS=$(cat discussion-thread-ts.txt)
+          if [ -f "thread-ts.txt" ]; then
+            THREAD_TS=$(cat thread-ts.txt)
             echo "THREAD_TS=${THREAD_TS}" >> $GITHUB_ENV
             echo "IS_THREADED_REPLY=true" >> $GITHUB_ENV
             echo "Found existing thread_ts: ${THREAD_TS}"
@@ -608,32 +624,19 @@ jobs:
             exit 1
           fi
 
-      # Store thread_ts for a newly created discussion thread
-      - name: Store thread timestamp for new discussion
-        if: github.event_name == 'discussion' && github.event.action == 'created'
+      # Store thread_ts in artifact if this is the first message in a thread
+      - name: Store new thread timestamp
+        if: env.IS_THREADED_REPLY != 'true'
         run: |
-          # Create the file with the thread_ts
-          echo "${{ env.RESPONSE_TS }}" > discussion-thread-ts.txt
-        
-      - name: Upload discussion thread artifact
-        if: github.event_name == 'discussion' && github.event.action == 'created'
-        uses: actions/upload-artifact@v4
-        with:
-          name: discussion-${{ github.event.discussion.number }}-thread-ts
-          path: discussion-thread-ts.txt
-          retention-days: 90
-          
-      # Store thread_ts for PR events if it doesn't already exist
-      - name: Create thread_ts artifact for PR if it doesn't exist
-        if: (github.event_name == 'pull_request' || github.event_name == 'pull_request_review' || github.event_name == 'pull_request_review_comment') && env.IS_THREADED_REPLY != 'true'
-        run: |
-          # Create the file with the thread_ts
-          echo "${{ env.RESPONSE_TS }}" > new-thread-ts.txt
+          # Create a file with the thread_ts
+          echo "${{ env.RESPONSE_TS }}" > thread-ts.txt
+          echo "Created file thread-ts.txt with content: ${{ env.RESPONSE_TS }}"
 
-      - name: Upload PR thread artifact if it doesn't exist
-        if: (github.event_name == 'pull_request' || github.event_name == 'pull_request_review' || github.event_name == 'pull_request_review_comment') && env.IS_THREADED_REPLY != 'true'
+      # Upload artifact with the thread_ts using unified artifact naming
+      - name: Upload thread artifact
+        if: env.IS_THREADED_REPLY != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: pr-${{ github.event.pull_request.number }}-thread-ts
-          path: new-thread-ts.txt
+          name: ${{ env.EVENT_TYPE }}-${{ env.EVENT_ID }}-thread-ts
+          path: thread-ts.txt
           retention-days: 90

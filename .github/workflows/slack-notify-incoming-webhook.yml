@@ -47,7 +47,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  SLACK_CHANNEL: mt-pr-review
+  SLACK_CHANNEL: alpha-pr-review
   # Color scheme
   COLOR_PR_OPENED: "#28a745"        # Green
   COLOR_PR_MERGED: "#28a745"        # Green
@@ -135,7 +135,7 @@ jobs:
                 }
               ]
             }
-          webhook: ${{ vars.SLACK_INCOMING_WEBHOOK_URL }}
+          webhook: ${{ secrets.SLACK_INCOMING_WEBHOOK_URL }}
           webhook-type: incoming-webhook
 
   # Job 2: Handle all other PR and Discussion events

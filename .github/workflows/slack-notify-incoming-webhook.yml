@@ -541,20 +541,3 @@ jobs:
             echo "Failed to send Slack message: $(echo "$RESPONSE" | jq -r '.error')"
             exit 1
           fi
-
-      # Store thread_ts in artifact if this is the first message in a thread
-      - name: Store new thread timestamp
-        if: env.IS_THREADED_REPLY != 'true'
-        run: |
-          # Create a file with the thread_ts
-          echo "${{ env.RESPONSE_TS }}" > thread-ts.txt
-          echo "Created file thread-ts.txt with content: ${{ env.RESPONSE_TS }}"
-
-      # Upload artifact with the thread_ts using unified artifact naming
-      - name: Upload thread artifact
-        if: env.IS_THREADED_REPLY != 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.EVENT_TYPE }}-${{ env.EVENT_ID }}-thread-ts
-          path: thread-ts.txt
-          retention-days: 90

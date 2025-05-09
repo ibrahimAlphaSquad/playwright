@@ -26,23 +26,11 @@ on:
       - created
       - edited
       - deleted
-  discussion:
-    types:
-      - created
-      - edited
-      - deleted
-      - answered
-      - unanswered
-  discussion_comment:
-    types:
-      - created
-      - edited
-      - deleted
 
 # Add concurrency configuration to ensure ALL runs execute sequentially
 concurrency:
   # Create a unique group key for each PR action to prevent any cancellation
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.discussion.number || github.sha }}-${{ github.run_id }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}-${{ github.run_id }}
   # This ensures queued jobs don't get canceled
   cancel-in-progress: false
 
@@ -199,7 +187,7 @@ jobs:
           path: thread-ts.txt
           retention-days: 90
 
-  # Job 2: Handle all other PR and Discussion events
+  # Job 2: Handle all other PR events
   notify_other_events:
     name: Notify Other Events
     # This job runs for all events EXCEPT the initial PR open
@@ -265,7 +253,7 @@ jobs:
           # For debugging
           echo "Retrieved commit message for SHA: ${HEAD_SHA}"
 
-      # Create a unique thread identifier for the PR or discussion
+      # Create a unique thread identifier for the PR
       - name: Create thread identifier
         id: create-thread-id
         run: |
@@ -280,40 +268,6 @@ jobs:
             # Set PR-specific environment variables
             echo "EVENT_ID=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
             echo "EVENT_TYPE=pr" >> $GITHUB_ENV
-          elif [[ "${{ github.event_name }}" == "discussion" || "${{ github.event_name }}" == "discussion_comment" ]]; then
-            # Get the PR number from the discussion (if it exists)
-            # Note: This assumes your discussions are related to PRs and include the PR number in the title or body
-            # Adjust this logic based on how your discussions are structured
-            
-            # First check if this is a PR discussion (title contains "PR #X" or similar)
-            DISCUSSION_TITLE="${{ github.event.discussion.title }}"
-            DISCUSSION_BODY="${{ github.event.discussion.body }}"
-            
-            # Try to extract PR number from title or body using regex
-            if [[ "$DISCUSSION_TITLE" =~ PR[[:space:]]*#([0-9]+) ]]; then
-              PR_NUMBER="${BASH_REMATCH[1]}"
-              echo "Found PR number $PR_NUMBER in discussion title"
-              echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
-              echo "EVENT_ID=$PR_NUMBER" >> $GITHUB_ENV
-              echo "EVENT_TYPE=pr" >> $GITHUB_ENV
-              THREAD_KEY="${{ github.repository }}-pr-$PR_NUMBER"
-            elif [[ "$DISCUSSION_BODY" =~ PR[[:space:]]*#([0-9]+) ]]; then
-              PR_NUMBER="${BASH_REMATCH[1]}"
-              echo "Found PR number $PR_NUMBER in discussion body"
-              echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
-              echo "EVENT_ID=$PR_NUMBER" >> $GITHUB_ENV
-              echo "EVENT_TYPE=pr" >> $GITHUB_ENV
-              THREAD_KEY="${{ github.repository }}-pr-$PR_NUMBER"
-            else
-              # No PR reference found, use the discussion number for the thread key
-              THREAD_KEY="${{ github.repository }}-discussion-${{ github.event.discussion.number }}"
-              echo "DISCUSSION_NUMBER=${{ github.event.discussion.number }}" >> $GITHUB_ENV
-              echo "EVENT_ID=${{ github.event.discussion.number }}" >> $GITHUB_ENV
-              echo "EVENT_TYPE=discussion" >> $GITHUB_ENV
-            fi
-            
-            echo "Created thread key: ${THREAD_KEY}" 
-            echo "THREAD_KEY=${THREAD_KEY}" >> $GITHUB_ENV
           fi
 
       # Download thread_ts from artifacts
@@ -497,67 +451,14 @@ jobs:
             
             echo "MESSAGE=💬 ${PREFIX}\n\n${PR_DETAILS}\n\n${COMMENT_DETAILS}" >> $GITHUB_ENV
             echo "COLOR=${{ env.COLOR_PR_COMMENT }}" >> $GITHUB_ENV
-
-          elif [[ "${{ github.event_name }}" == "discussion" || "${{ github.event_name }}" == "discussion_comment" ]]; then
-            # Handle Discussion events
-            DISCUSSION_TITLE="${{ github.event.discussion.title }}"
-            DISCUSSION_URL="${{ github.event.discussion.html_url }}"
-            DISCUSSION_NUMBER="${{ github.event.discussion.number }}"
-            
-            DISCUSSION_DETAILS="*Title:* ${DISCUSSION_TITLE}\n*URL:* ${DISCUSSION_URL}\n*Author:* ${{ github.event.discussion.user.login }}"
-            
-            DISCUSSION_ACTION="${{ github.event.action }}"
-            ACTION_ICON="💬"
-            PREFIX="*DISCUSSION VIBES*"
-            
-            if [[ "${DISCUSSION_ACTION}" == "created" ]]; then
-              ACTION_ICON="🆕"
-              PREFIX="*NEW DISCUSSION JUST DROPPED*"
-              
-              # For new discussions, create the thread_ts artifact after posting
-              echo "IS_NEW_DISCUSSION=true" >> $GITHUB_ENV
-            elif [[ "${DISCUSSION_ACTION}" == "answered" ]]; then
-              ACTION_ICON="✅"
-              PREFIX="*GOT THE ANSWER, NO CAP*"
-            elif [[ "${DISCUSSION_ACTION}" == "unanswered" ]]; then
-              ACTION_ICON="❓"
-              PREFIX="*STILL LOOKING FOR ANSWERS*"
-            fi
-            
-            # For comment events
-            if [[ "${{ github.event_name }}" == "discussion_comment" ]]; then
-              COMMENT="${{ github.event.comment.body }}"
-              
-              if [ ${#COMMENT} -gt 150 ]; then
-                TRUNCATED_COMMENT="${COMMENT:0:150}..."
-              else
-                TRUNCATED_COMMENT="$COMMENT"
-              fi
-              
-              COMMENT_VERB="DROPPED"
-              if [[ "${{ github.event.action }}" == "edited" ]]; then
-                COMMENT_VERB="EDITED"
-              elif [[ "${{ github.event.action }}" == "deleted" ]]; then
-                COMMENT_VERB="DELETED"
-              fi
-              
-              DISCUSSION_DETAILS="${DISCUSSION_DETAILS}\n*Comment ${COMMENT_VERB} by:* ${{ github.event.comment.user.login }}\n*Time:* $(date -d "${{ github.event.comment.created_at }}" "+%Y-%m-%d %H:%M:%S UTC")"
-              
-              if [[ "${{ github.event.action }}" != "deleted" ]]; then
-                DISCUSSION_DETAILS="${DISCUSSION_DETAILS}\n*Comment:* ${TRUNCATED_COMMENT}"
-              fi
-              
-              echo "MESSAGE=${ACTION_ICON} *DISCUSSION COMMENT ${COMMENT_VERB}*\n\n${DISCUSSION_DETAILS}" >> $GITHUB_ENV
-            else
-              echo "MESSAGE=${ACTION_ICON} ${PREFIX}\n\n${DISCUSSION_DETAILS}" >> $GITHUB_ENV
-            fi
-            
-            echo "COLOR=${{ env.COLOR_UNKNOWN }}" >> $GITHUB_ENV
             
           else
             # Unknown events
             echo "MESSAGE=👽 *SOMETHING WEIRD HAPPENED, TBH*\n\n${PR_DETAILS}" >> $GITHUB_ENV
             echo "COLOR=${{ env.COLOR_UNKNOWN }}" >> $GITHUB_ENV
+            echo "EVENT_TYPE=unknown" >> $GITHUB_ENV
+            echo "EVENT_ID=${{ github.event.id }}" >> $GITHUB_ENV
+            echo "EVENT ${{ github.event.action }}"
           fi
 
           # Set current Unix timestamp for the message
@@ -566,15 +467,9 @@ jobs:
       # Set Slack title and link environment variables
       - name: Set Slack title and link environment variables
         run: |
-          if [[ "${{ github.event_name }}" == "discussion" || "${{ github.event_name }}" == "discussion_comment" ]]; then
-            echo "TITLE=${{ github.event.discussion.title }}" >> $GITHUB_ENV
-            echo "NUMBER=${{ github.event.discussion.number }}" >> $GITHUB_ENV
-            echo "TITLE_LINK=${{ github.event.discussion.html_url }}" >> $GITHUB_ENV
-          else
-            echo "TITLE=${{ github.event.pull_request.title }}" >> $GITHUB_ENV
-            echo "NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
-            echo "TITLE_LINK=${{ github.event.pull_request.html_url }}" >> $GITHUB_ENV
-          fi
+          echo "TITLE=${{ github.event.pull_request.title }}" >> $GITHUB_ENV
+          echo "NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          echo "TITLE_LINK=${{ github.event.pull_request.html_url }}" >> $GITHUB_ENV
 
       # Send Slack notification with thread_ts when it's a reply
       - name: Send Slack notification
@@ -663,43 +558,3 @@ jobs:
           name: ${{ env.EVENT_TYPE }}-${{ env.EVENT_ID }}-thread-ts
           path: thread-ts.txt
           retention-days: 90
-      
-      - name: Debug to log all github and runner events
-        run: |
-          echo "GITHUB_EVENT: ${{ toJson(github.event) }}"
-          echo "RUNNER_EVENT: ${{ toJson(runner) }}"
-          echo "GITHUB_CONTEXT: ${{ toJson(github) }}"
-          echo "ENVIRONMENT VARIABLES:"
-          env | sort
-          echo "GITHUB_ENV: ${{ toJson(github.env) }}"
-          echo "GITHUB_OUTPUT: ${{ toJson(github.output) }}"
-          echo "GITHUB_PATH: ${{ toJson(github.path) }}"
-          echo "GITHUB_WORKSPACE: ${{ toJson(github.workspace) }}"
-          echo "GITHUB_REPOSITORY: ${{ toJson(github.repository) }}"
-          echo "GITHUB_RUN_ID: ${{ toJson(github.run_id) }}"
-          echo "GITHUB_RUN_NUMBER: ${{ toJson(github.run_number) }}"
-      - name: Debug to get all previous runners
-        run: |
-          echo "GITHUB_RUNNER_DEBUG: ${{ toJson(github.runner.debug) }}"
-          echo "GITHUB_RUNNER_OS: ${{ toJson(github.runner.os) }}"
-          echo "GITHUB_RUNNER_NAME: ${{ toJson(github.runner.name) }}"
-          echo "GITHUB_RUNNER_VERSION: ${{ toJson(github.runner.version) }}"
-          echo "GITHUB_RUNNER_ARCH: ${{ toJson(github.runner.arch) }}"
-          echo "GITHUB_RUNNER_TEMP: ${{ toJson(github.runner.temp) }}"
-          echo "GITHUB_RUNNER_WORKSPACE: ${{ toJson(github.runner.workspace) }}"
-          echo "GITHUB_RUNNER_LABELS: ${{ toJson(github.runner.labels) }}"
-          echo "GITHUB_RUNNER_ID: ${{ toJson(github.runner.id) }}"
-          echo "GITHUB_RUNNER_GROUP: ${{ toJson(github.runner.group) }}"
-          echo "GITHUB_RUNNER_GROUP_ID: ${{ toJson(github.runner.group_id) }}"
-          echo "GITHUB_RUNNER_GROUP_NAME: ${{ toJson(github.runner.group_name) }}"
-          echo "GITHUB_RUNNER_GROUP_URL: ${{ toJson(github.runner.group_url) }}"
-          echo "GITHUB_RUNNER_GROUP_DESCRIPTION: ${{ toJson(github.runner.group_description) }}"
-          echo "GITHUB_RUNNER_GROUP_TYPE: ${{ toJson(github.runner.group_type) }}"
-          echo "GITHUB_RUNNER_GROUP_URL: ${{ toJson(github.runner.group_url) }}"
-          echo "GITHUB_RUNNER_GROUP_ID: ${{ toJson(github.runner.group_id) }}"
-          echo "GITHUB_RUNNER_GROUP_NAME: ${{ toJson(github.runner.group_name) }}"
-          echo "GITHUB_RUNNER_GROUP_DESCRIPTION: ${{ toJson(github.runner.group_description) }}"
-          echo "GITHUB_RUNNER_GROUP_TYPE: ${{ toJson(github.runner.group_type) }}"
-          echo "GITHUB_RUNNER_GROUP_URL: ${{ toJson(github.runner.group_url) }}"
-          echo "GITHUB_RUNNER_GROUP_ID: ${{ toJson(github.runner.group_id) }}"
-          echo "GITHUB_RUNNER_GROUP_NAME: ${{ toJson(github.runner.group_name) }}"

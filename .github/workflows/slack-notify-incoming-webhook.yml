@@ -197,8 +197,8 @@ jobs:
   # Job 2: Handle all other PR and Discussion events
   notify_other_events:
     name: Notify Other Events
-    # This job runs for all events EXCEPT the initial PR open
-    if: github.event_name != 'pull_request' || github.event.action != 'opened'
+    if: ${{ always() && (github.event_name != 'pull_request' || github.event.action != 'opened') }}
+    needs: notify_pr_creation
     environment:
       name: Production
     runs-on: ubuntu-latest

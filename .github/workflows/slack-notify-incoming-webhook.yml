@@ -46,6 +46,11 @@ concurrency:
   # This ensures queued jobs don't get canceled
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  checks: read
+  actions: read
+
 env:
   # Channel ID must be used instead of channel name for Slack API
   SLACK_CHANNEL: alpha-pr-review
@@ -197,13 +202,22 @@ jobs:
   # Job 2: Handle all other PR and Discussion events
   notify_other_events:
     name: Notify Other Events
-    needs: notify_pr_creation
     # This job runs for all events EXCEPT the initial PR open
     if: github.event_name != 'pull_request' || github.event.action != 'opened'
     environment:
       name: Production
     runs-on: ubuntu-latest
     steps:
+      - uses: kachick/wait-other-jobs@v3.8.0
+        with:
+          skip-list: |
+            [
+              {
+                "workflowFile": "slack-notify-incoming-webhook.yml",
+                "jobName": "Notify PR Creation"
+              }
+            ]
+        timeout-minutes: 3
       # For synchronize events, fetch the latest commit message using GitHub API
       - name: Get commit message for synchronize event
         if: github.event_name == 'pull_request' && github.event.action == 'synchronize'

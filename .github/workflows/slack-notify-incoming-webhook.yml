@@ -215,11 +215,15 @@ jobs:
       - name: Wait and retry if dependency was skipped
         id: check-dependency
         run: |
-          MAX_RETRIES=5
+          MAX_RETRIES=2
           RETRY_DELAY=60  # in seconds
           ATTEMPT=1
           echo "Dependency job result: ${{ needs.notify_pr_creation.result }}"
           echo "Dependency job result: ${{ needs.notify_pr_creation }}"
+          echo "Log level: ${{ github.event_name }} - ${{ github.event.action }}"
+          echo "Log previous job: ${{ needs.notify_pr_creation.conclusion }}"
+          echo "Log current job: ${{ job.status }}"
+          echo "Log Previous job Object: ${{ toJson(needs.notify_pr_creation) }}"
           while [[ "$ATTEMPT" -le "$MAX_RETRIES" ]]; do
             echo "Dependency job result inside of while loop: ${{ needs.notify_pr_creation.result }}"
             if [[  "${{ needs.notify_pr_creation.result }}" == "skipped" ]]; then

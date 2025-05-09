@@ -212,19 +212,34 @@ jobs:
     needs: [notify_pr_creation]
     # This ensures this job always runs even if the first job is skipped
     steps:
-      - name: Check if dependency was skipped
+      - name: Wait and retry if dependency was skipped
         id: check-dependency
         run: |
-          echo "Dependency job result: ${{ needs.notify_pr_creation.result }}"
-          
-          if [[ "${{ needs.notify_pr_creation.result }}" == "skipped" ]]; then
-            echo "First job was skipped, proceeding normally"
-          elif [[ "${{ needs.notify_pr_creation.result }}" == "success" ]]; then
-            echo "First job completed successfully, proceeding normally"
-          else
-            echo "First job failed or was canceled with result: ${{ needs.notify_pr_creation.result }}"
-            echo "But we'll continue anyway since this is a notification job"
-          fi
+          MAX_RETRIES=5
+          RETRY_DELAY=60  # in seconds
+          ATTEMPT=1
+
+          while [[ "$ATTEMPT" -le "$MAX_RETRIES" ]]; do
+            STATUS="${{ needs.notify_pr_creation.result }}"
+            echo "Attempt $ATTEMPT: Dependency job result: $STATUS"
+
+            if [[ "$STATUS" == "skipped" ]]; then
+              if [[ "$ATTEMPT" -eq "$MAX_RETRIES" ]]; then
+                echo "Max retries reached. Proceeding anyway."
+                break
+              fi
+              echo "Job was skipped. Waiting 1 minute before retrying..."
+              sleep "$RETRY_DELAY"
+              ((ATTEMPT++))
+            elif [[ "$STATUS" == "success" ]]; then
+              echo "Job completed successfully. Proceeding."
+              break
+            else
+              echo "Job failed or was canceled with result: $STATUS"
+              echo "Proceeding anyway since this is a notification job."
+              break
+            fi
+          done
 
       # For synchronize events, fetch the latest commit message using GitHub API
       - name: Get commit message for synchronize event

@@ -218,13 +218,6 @@ jobs:
           MAX_RETRIES=2
           RETRY_DELAY=60  # in seconds
           ATTEMPT=1
-          echo "Dependency job result: ${{ needs.notify_pr_creation.result }}"
-          echo "Dependency job result: ${{ needs.notify_pr_creation }}"
-          echo "Log level: ${{ github.event_name }} - ${{ github.event.action }}"
-          echo "Log previous job: ${{ needs.notify_pr_creation.conclusion }}"
-          echo "Log status job: ${{ job.status }}"
-          echo "Log Previous job Object: ${{ toJson(needs) }}"
-          echo "Github event Object: ${{ toJson(github.event) }}"
           while [[ "$ATTEMPT" -le "$MAX_RETRIES" ]]; do
             echo "Dependency job result inside of while loop: ${{ needs.notify_pr_creation.result }}"
             if [[  "${{ needs.notify_pr_creation.result }}" == "skipped" ]]; then
@@ -670,3 +663,43 @@ jobs:
           name: ${{ env.EVENT_TYPE }}-${{ env.EVENT_ID }}-thread-ts
           path: thread-ts.txt
           retention-days: 90
+      
+      - name: Debug to log all github and runner events
+        run: |
+          echo "GITHUB_EVENT: ${{ toJson(github.event) }}"
+          echo "RUNNER_EVENT: ${{ toJson(runner) }}"
+          echo "GITHUB_CONTEXT: ${{ toJson(github) }}"
+          echo "ENVIRONMENT VARIABLES:"
+          env | sort
+          echo "GITHUB_ENV: ${{ toJson(github.env) }}"
+          echo "GITHUB_OUTPUT: ${{ toJson(github.output) }}"
+          echo "GITHUB_PATH: ${{ toJson(github.path) }}"
+          echo "GITHUB_WORKSPACE: ${{ toJson(github.workspace) }}"
+          echo "GITHUB_REPOSITORY: ${{ toJson(github.repository) }}"
+          echo "GITHUB_RUN_ID: ${{ toJson(github.run_id) }}"
+          echo "GITHUB_RUN_NUMBER: ${{ toJson(github.run_number) }}"
+      - name: Debug to get all previous runners
+        run: |
+          echo "GITHUB_RUNNER_DEBUG: ${{ toJson(github.runner.debug) }}"
+          echo "GITHUB_RUNNER_OS: ${{ toJson(github.runner.os) }}"
+          echo "GITHUB_RUNNER_NAME: ${{ toJson(github.runner.name) }}"
+          echo "GITHUB_RUNNER_VERSION: ${{ toJson(github.runner.version) }}"
+          echo "GITHUB_RUNNER_ARCH: ${{ toJson(github.runner.arch) }}"
+          echo "GITHUB_RUNNER_TEMP: ${{ toJson(github.runner.temp) }}"
+          echo "GITHUB_RUNNER_WORKSPACE: ${{ toJson(github.runner.workspace) }}"
+          echo "GITHUB_RUNNER_LABELS: ${{ toJson(github.runner.labels) }}"
+          echo "GITHUB_RUNNER_ID: ${{ toJson(github.runner.id) }}"
+          echo "GITHUB_RUNNER_GROUP: ${{ toJson(github.runner.group) }}"
+          echo "GITHUB_RUNNER_GROUP_ID: ${{ toJson(github.runner.group_id) }}"
+          echo "GITHUB_RUNNER_GROUP_NAME: ${{ toJson(github.runner.group_name) }}"
+          echo "GITHUB_RUNNER_GROUP_URL: ${{ toJson(github.runner.group_url) }}"
+          echo "GITHUB_RUNNER_GROUP_DESCRIPTION: ${{ toJson(github.runner.group_description) }}"
+          echo "GITHUB_RUNNER_GROUP_TYPE: ${{ toJson(github.runner.group_type) }}"
+          echo "GITHUB_RUNNER_GROUP_URL: ${{ toJson(github.runner.group_url) }}"
+          echo "GITHUB_RUNNER_GROUP_ID: ${{ toJson(github.runner.group_id) }}"
+          echo "GITHUB_RUNNER_GROUP_NAME: ${{ toJson(github.runner.group_name) }}"
+          echo "GITHUB_RUNNER_GROUP_DESCRIPTION: ${{ toJson(github.runner.group_description) }}"
+          echo "GITHUB_RUNNER_GROUP_TYPE: ${{ toJson(github.runner.group_type) }}"
+          echo "GITHUB_RUNNER_GROUP_URL: ${{ toJson(github.runner.group_url) }}"
+          echo "GITHUB_RUNNER_GROUP_ID: ${{ toJson(github.runner.group_id) }}"
+          echo "GITHUB_RUNNER_GROUP_NAME: ${{ toJson(github.runner.group_name) }}"

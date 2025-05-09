@@ -590,10 +590,6 @@ jobs:
             $( [[ "${{ env.IS_THREADED_REPLY }}" == "true" ]] && echo "--data-urlencode thread_ts=${{ env.THREAD_TS }}" )
           )
 
-          # Execute curl
-          echo "Executing curl command"
-          RESPONSE=$(eval "$CURL_CMD")
-
           # Debug: Log raw response
           echo "Response from Slack API: $RESPONSE"
 

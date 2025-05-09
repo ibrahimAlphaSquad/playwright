@@ -203,21 +203,29 @@ jobs:
   notify_other_events:
     name: Notify Other Events
     # This job runs for all events EXCEPT the initial PR open
-    if: github.event_name != 'pull_request' || github.event.action != 'opened'
+    if: always() && (github.event_name != 'pull_request' || github.event.action != 'opened')
     environment:
       name: Production
     runs-on: ubuntu-latest
+    # Add dependency on the first job but allow it to run if the first job is skipped
+    # (which happens for all events except PR creation)
+    needs: [notify_pr_creation]
+    # This ensures this job always runs even if the first job is skipped
     steps:
-      - uses: kachick/wait-other-jobs@v3.8.0
-        with:
-          skip-list: |
-            [
-              {
-                "workflowFile": "slack-notify-incoming-webhook.yml",
-                "jobName": "Notify PR Creation"
-              }
-            ]
-        timeout-minutes: 3
+      - name: Check if dependency was skipped
+        id: check-dependency
+        run: |
+          echo "Dependency job result: ${{ needs.notify_pr_creation.result }}"
+          
+          if [[ "${{ needs.notify_pr_creation.result }}" == "skipped" ]]; then
+            echo "First job was skipped, proceeding normally"
+          elif [[ "${{ needs.notify_pr_creation.result }}" == "success" ]]; then
+            echo "First job completed successfully, proceeding normally"
+          else
+            echo "First job failed or was canceled with result: ${{ needs.notify_pr_creation.result }}"
+            echo "But we'll continue anyway since this is a notification job"
+          fi
+
       # For synchronize events, fetch the latest commit message using GitHub API
       - name: Get commit message for synchronize event
         if: github.event_name == 'pull_request' && github.event.action == 'synchronize'

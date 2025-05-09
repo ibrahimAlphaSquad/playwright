@@ -222,8 +222,9 @@ jobs:
           echo "Dependency job result: ${{ needs.notify_pr_creation }}"
           echo "Log level: ${{ github.event_name }} - ${{ github.event.action }}"
           echo "Log previous job: ${{ needs.notify_pr_creation.conclusion }}"
-          echo "Log current job: ${{ job.status }}"
-          echo "Log Previous job Object: ${{ toJson(needs.notify_pr_creation) }}"
+          echo "Log status job: ${{ job.status }}"
+          echo "Log Previous job Object: ${{ toJson(needs) }}"
+          echo "Github event Object: ${{ toJson(github) }}"
           while [[ "$ATTEMPT" -le "$MAX_RETRIES" ]]; do
             echo "Dependency job result inside of while loop: ${{ needs.notify_pr_creation.result }}"
             if [[  "${{ needs.notify_pr_creation.result }}" == "skipped" ]]; then

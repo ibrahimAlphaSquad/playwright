@@ -601,7 +601,7 @@ jobs:
           echo "Response from Slack API: $RESPONSE"
           
           # Extract thread_ts from response
-          RESPONSE_TS=$(echo "$RESPONSE" | jq -r '.ts')
+          RESPONSE_TS=$(echo "$RESPONSE" | jq -r '.message.attachments[0].ts')
           THREAD_TS=$RESPONSE_TS
           
           # If this was a reply, use the existing thread_ts

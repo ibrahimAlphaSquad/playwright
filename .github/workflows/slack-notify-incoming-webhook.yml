@@ -578,22 +578,17 @@ jobs:
           echo "$ATTACHMENTS" | jq '.[0].text = "REDACTED"' || echo "Failed to print attachments"
 
           # Build the curl command
-          CURL_CMD="curl -s -X POST \
-            \"${{ env.SLACK_API_URL }}\" \
-            -H \"Authorization: Bearer ${{ secrets.SLACK_USER_OAUTH_TOKEN }}\" \
-            -H \"Content-Type: application/x-www-form-urlencoded\" \
-            --data-urlencode \"channel=${{ env.SLACK_CHANNEL_ID }}\" \
-            --data-urlencode \"attachments=$ATTACHMENTS\" \
-            --data-urlencode \"link_names=true\" \
-            --data-urlencode \"mrkdwn=true\" \
-            --data-urlencode \"unfurl_links=false\" \
-            --data-urlencode \"unfurl_media=false\""
-
-          # Add thread_ts if this is a threaded reply
-          if [[ "${{ env.IS_THREADED_REPLY }}" == "true" ]]; then
-            CURL_CMD="$CURL_CMD --data-urlencode \"thread_ts=${{ env.THREAD_TS }}\""
-            echo "Sending as reply to thread ${{ env.THREAD_TS }}"
-          fi
+          RESPONSE=$(curl -s -X POST "${{ env.SLACK_API_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.SLACK_USER_OAUTH_TOKEN }}" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            --data-urlencode "channel=${{ env.SLACK_CHANNEL_ID }}" \
+            --data-urlencode "attachments=$ATTACHMENTS" \
+            --data-urlencode "link_names=true" \
+            --data-urlencode "mrkdwn=true" \
+            --data-urlencode "unfurl_links=false" \
+            --data-urlencode "unfurl_media=false" \
+            $( [[ "${{ env.IS_THREADED_REPLY }}" == "true" ]] && echo "--data-urlencode thread_ts=${{ env.THREAD_TS }}" )
+          )
 
           # Execute curl
           echo "Executing curl command"

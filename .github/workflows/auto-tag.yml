@@ -11,12 +11,9 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - "**"
-      - "!.github/workflows/**"
 
 permissions:
-  contents: write
+  contents: write  # Needed to push tags
   pull-requests: read
 
 jobs:
@@ -29,7 +26,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Fetch all history for tags
 
       - name: Get latest tag
         id: get_latest_tag
@@ -39,16 +36,26 @@ jobs:
           echo "Latest tag: $latest_tag"
           echo "latest_tag=$latest_tag" >> $GITHUB_ENV
 
-      - name: Determine if hotfix from PR label
-        id: check_hotfix
+      - name: Determine release type from PR label
+        id: check_release_type
         run: |
-          # Check if the PR has a hotfix label
+          # Set default release type
+          echo "release_type=patch" >> $GITHUB_ENV
+          
+          # Check for hotfix label
           if [[ "${{ contains(github.event.pull_request.labels.*.name, 'hotfix') }}" == "true" ]]; then
-            echo "is_hotfix=true" >> $GITHUB_ENV
+            echo "release_type=hotfix" >> $GITHUB_ENV
             echo "Hotfix PR detected"
+          # Check for major release label
+          elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'major-release') }}" == "true" ]]; then
+            echo "release_type=major" >> $GITHUB_ENV
+            echo "Major release PR detected"
+          # Check for minor release label
+          elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'minor-release') }}" == "true" ]]; then
+            echo "release_type=minor" >> $GITHUB_ENV
+            echo "Minor release PR detected"
           else
-            echo "is_hotfix=false" >> $GITHUB_ENV
-            echo "Regular PR detected"
+            echo "Standard patch release detected"
           fi
 
       - name: Calculate next tag
@@ -57,27 +64,26 @@ jobs:
           version="${{ env.latest_tag }}"
           version="${version#v}"  # Remove leading 'v'
           IFS='.' read -r major minor patch <<< "$version"
-
-          if [[ "${{ env.is_hotfix }}" == "true" ]]; then
-            # For hotfix, increment minor version, reset patch to 0
-            next_tag="v$major.$((minor + 1)).0"
-            echo "Creating hotfix tag: $next_tag"
-          else
-            # Check if major version bump is requested via label
-            if [[ "${{ contains(github.event.pull_request.labels.*.name, 'major-release') }}" == "true" ]]; then
+          
+          # Calculate tag based on release type
+          case "${{ env.release_type }}" in
+            major)
+              # For major version, increment major and reset minor/patch to 0
               next_tag="v$((major + 1)).0.0"
               echo "Creating major version tag: $next_tag"
-            # Check if minor version bump is requested via label
-            elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'minor-release') }}" == "true" ]]; then
+              ;;
+            minor | hotfix)
+              # For minor version or hotfix, increment minor version, reset patch to 0
               next_tag="v$major.$((minor + 1)).0"
-              echo "Creating minor version tag: $next_tag"
-            else
-              # Default: increment patch version
+              echo "Creating minor/hotfix version tag: $next_tag"
+              ;;
+            *)
+              # Default (patch): increment patch version
               next_tag="v$major.$minor.$((patch + 1))"
               echo "Creating patch version tag: $next_tag"
-            fi
-          fi
-
+              ;;
+          esac
+          
           # Make sure the tag doesn't already exist
           if git rev-parse "$next_tag" >/dev/null 2>&1; then
             echo "Warning: Tag $next_tag already exists, calculating next available tag"
@@ -98,7 +104,7 @@ jobs:
               next_tag="v$major.$minor.$patch"
             fi
           fi
-
+          
           echo "Final tag: $next_tag"
           echo "next_tag=$next_tag" >> $GITHUB_ENV
 
@@ -106,21 +112,26 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-
-          # Create a more descriptive tag message based on PR information
-          if [[ "${{ env.is_hotfix }}" == "true" ]]; then
-            tag_message="Hotfix release ${{ env.next_tag }} from PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
-          elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'major-release') }}" == "true" ]]; then
-            tag_message="Major release ${{ env.next_tag }} from PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
-          elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'minor-release') }}" == "true" ]]; then
-            tag_message="Minor release ${{ env.next_tag }} from PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
-          else
-            tag_message="Patch release ${{ env.next_tag }} from PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
-          fi
-
+          
+          # Create a more descriptive tag message based on PR information and release type
+          case "${{ env.release_type }}" in
+            major)
+              tag_message="Major release ${{ env.next_tag }} from PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
+              ;;
+            minor)
+              tag_message="Minor release ${{ env.next_tag }} from PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
+              ;;
+            hotfix)
+              tag_message="Hotfix release ${{ env.next_tag }} from PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
+              ;;
+            *)
+              tag_message="Patch release ${{ env.next_tag }} from PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
+              ;;
+          esac
+          
           git tag -a ${{ env.next_tag }} -m "$tag_message"
           git push origin ${{ env.next_tag }} || echo "Tag push failed, possibly already exists"
-        continue-on-error: true
+        continue-on-error: true  # Allow workflow to proceed even if tag push fails
 
       - name: Log result
         run: |
@@ -137,7 +148,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Fetch all history for tags
 
       - name: Get latest tag
         id: get_latest_tag
@@ -153,11 +164,11 @@ jobs:
           version="${{ env.latest_tag }}"
           version="${version#v}"  # Remove leading 'v'
           IFS='.' read -r major minor patch <<< "$version"
-
+          
           # For direct push, always increment minor version, reset patch to 0
           next_tag="v$major.$((minor + 1)).0"
           echo "Creating minor version tag for direct push: $next_tag"
-
+          
           # Make sure the tag doesn't already exist
           if git rev-parse "$next_tag" >/dev/null 2>&1; then
             echo "Warning: Tag $next_tag already exists, calculating next available tag"
@@ -167,7 +178,7 @@ jobs:
             done
             next_tag="v$major.$minor.$patch"
           fi
-
+          
           echo "Final tag: $next_tag"
           echo "next_tag=$next_tag" >> $GITHUB_ENV
 
@@ -175,14 +186,14 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-
+          
           # Get the commit message for the tag
           commit_msg=$(git log -1 --pretty=%B)
           tag_message="Minor release ${{ env.next_tag }} from direct push: ${commit_msg}"
-
+          
           git tag -a ${{ env.next_tag }} -m "$tag_message"
           git push origin ${{ env.next_tag }} || echo "Tag push failed, possibly already exists"
-        continue-on-error: true # Allow workflow to proceed even if tag push fails
+        continue-on-error: true  # Allow workflow to proceed even if tag push fails
 
       - name: Log result
         run: |

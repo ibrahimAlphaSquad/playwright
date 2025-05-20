@@ -15,7 +15,7 @@ permissions:
   pull-requests: read
 
 jobs:
-  create_tag_on_pr_merge:
+  tag_on_pr_merge:
     if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
@@ -32,7 +32,7 @@ jobs:
           latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
           echo "latest_tag=$latest_tag" >> $GITHUB_ENV
 
-      - name: Determine release type and tag message
+      - name: Determine release type and message
         id: determine_release_type
         run: |
           title="${{ github.event.pull_request.title }}"
@@ -54,13 +54,13 @@ jobs:
           IFS='.' read -r major minor patch <<< "$version"
 
           case "${{ env.release_type }}" in
+            patch)
+              patch=$((patch + 1))
+              ;;
             major)
               major=$((major + 1))
               minor=0
               patch=0
-              ;;
-            patch)
-              patch=$((patch + 1))
               ;;
           esac
 
@@ -78,14 +78,13 @@ jobs:
           git config user.name "github-actions"
           git config user.email "actions@github.com"
 
-          full_tag_message="${{ env.tag_message }} ${{ env.next_tag }} from PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
-
-          git tag -a ${{ env.next_tag }} -m "$full_tag_message"
-          git push origin ${{ env.next_tag }} || echo "Tag already exists"
+          tag_msg="${{ env.tag_message }} ${{ env.next_tag }} from PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
+          git tag -a "${{ env.next_tag }}" -m "$tag_msg"
+          git push origin "${{ env.next_tag }}"
         continue-on-error: true
 
-  create_tag_on_direct_push:
-    if: github.event_name == 'push' && !contains(github.event.head_commit.message, 'Merge pull request')
+  tag_on_direct_push:
+    if: github.event_name == 'push' && !startsWith(github.event.head_commit.message, 'Merge pull request')
     runs-on: ubuntu-latest
 
     steps:
@@ -101,7 +100,7 @@ jobs:
           latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
           echo "latest_tag=$latest_tag" >> $GITHUB_ENV
 
-      - name: Calculate next minor version tag
+      - name: Calculate next minor tag
         id: calculate_next_tag
         run: |
           version="${{ env.latest_tag }}"
@@ -124,9 +123,8 @@ jobs:
           git config user.name "github-actions"
           git config user.email "actions@github.com"
 
-          commit_msg=$(git log -1 --pretty=%B)
-          tag_message="Minor release ${{ env.next_tag }} from direct push: ${commit_msg}"
-
-          git tag -a ${{ env.next_tag }} -m "$tag_message"
-          git push origin ${{ env.next_tag }} || echo "Tag already exists"
+          msg=$(git log -1 --pretty=%B)
+          tag_msg="Minor release ${{ env.next_tag }} from direct push: $msg"
+          git tag -a "${{ env.next_tag }}" -m "$tag_msg"
+          git push origin "${{ env.next_tag }}"
         continue-on-error: true

@@ -32,7 +32,7 @@ jobs:
           latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
           echo "latest_tag=$latest_tag" >> $GITHUB_ENV
 
-      - name: Determine release type from PR
+      - name: Determine release type and tag message
         id: determine_release_type
         run: |
           title="${{ github.event.pull_request.title }}"
@@ -40,8 +40,10 @@ jobs:
 
           if echo "$title" | grep -iq hotfix || echo "$labels" | grep -iq hotfix; then
             echo "release_type=patch" >> $GITHUB_ENV
+            echo "tag_message=Patch release" >> $GITHUB_ENV
           else
             echo "release_type=major" >> $GITHUB_ENV
+            echo "tag_message=Major release" >> $GITHUB_ENV
           fi
 
       - name: Calculate next tag
@@ -53,12 +55,16 @@ jobs:
 
           case "${{ env.release_type }}" in
             major)
-              next_tag="v$((major + 1)).0.0"
+              major=$((major + 1))
+              minor=0
+              patch=0
               ;;
             patch)
-              next_tag="v$major.$minor.$((patch + 1))"
+              patch=$((patch + 1))
               ;;
           esac
+
+          next_tag="v$major.$minor.$patch"
 
           while git rev-parse "$next_tag" >/dev/null 2>&1; do
             patch=$((patch + 1))
@@ -72,9 +78,9 @@ jobs:
           git config user.name "github-actions"
           git config user.email "actions@github.com"
 
-          tag_message="${{ env.release_type^ }} release ${{ env.next_tag }} from PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
+          full_tag_message="${{ env.tag_message }} ${{ env.next_tag }} from PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
 
-          git tag -a ${{ env.next_tag }} -m "$tag_message"
+          git tag -a ${{ env.next_tag }} -m "$full_tag_message"
           git push origin ${{ env.next_tag }} || echo "Tag already exists"
         continue-on-error: true
 

@@ -1,0 +1,88 @@
+name: Yarn Cache Check and Cleanup Triggered Manually
+
+on:
+  workflow_dispatch:      # Manual trigger for testing
+
+jobs:
+  yarn-cache-management:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install Yarn Package Manager
+        run: npm install -g yarn
+
+      - name: Generate Large Yarn Cache (Download 1GB+ Packages)
+        run: |
+          echo "Installing large packages to fill Yarn cache..."
+          
+          # Playwright (Includes browsers, ~500MB)
+          yarn global add playwright
+
+          # Browser automation tools
+          yarn global add puppeteer          # ~300MB
+          
+          # Google Cloud SDK (~200MB)
+          yarn global add @google-cloud/storage
+          yarn global add @google-cloud/functions-framework
+
+          # AWS SDK (~200MB)
+          yarn global add aws-sdk
+          yarn global add @aws-sdk/client-s3
+
+          # IBM Cloud SDK (~150MB)
+          yarn global add ibm-cloud-sdk-core
+          yarn global add ibm-cos-sdk
+
+          # Firebase Tools (~200MB)
+          yarn global add firebase-tools
+
+          # Serverless Framework (~100MB)
+          yarn global add serverless
+
+          # Expo CLI (~150MB)
+          yarn global add expo-cli
+
+      - name: Check Yarn Cache Size
+        id: cache_size
+        run: |
+          CACHE_DIR=$(yarn cache dir)
+          CACHE_SIZE_BYTES=$(du -sb $CACHE_DIR | awk '{print $1}')  # Size in bytes
+          CACHE_SIZE_HR=$(du -sh $CACHE_DIR | awk '{print $1}')      # Human-readable
+          echo "Current Yarn cache size: $CACHE_SIZE_HR"
+          echo "cache_size_bytes=$CACHE_SIZE_BYTES" >> $GITHUB_ENV
+          echo "cache_size_hr=$CACHE_SIZE_HR" >> $GITHUB_ENV
+          echo "Yarn Cache Size: $CACHE_SIZE_HR" > yarn_cache_report.txt
+
+      - name: Analyze Yarn Cache
+        run: |
+          echo "Performing Yarn cache analysis..." >> yarn_cache_report.txt
+          yarn cache list >> yarn_cache_report.txt
+
+      - name: Clear Yarn Cache if Threshold Exceeded
+        if: ${{ env.cache_size_bytes > 400000000 }}  # Use env variable instead of step output
+        run: |
+          echo "Cache size exceeds 500MB. Clearing cache..." >> yarn_cache_report.txt
+          yarn cache clean
+          echo "Yarn cache cleared." >> yarn_cache_report.txt
+
+      - name: Display Post-Cleanup Cache Size
+        run: |
+          CACHE_DIR=$(yarn cache dir)
+          CACHE_SIZE_HR=$(du -sh $CACHE_DIR | awk '{print $1}')
+          echo "Post-cleanup Yarn cache size: $CACHE_SIZE_HR"
+          echo "Post-cleanup Yarn cache size: $CACHE_SIZE_HR" >> yarn_cache_report.txt
+
+      - name: Upload Yarn Cache Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: cache-size-${{ env.cache_size_hr }}
+          path: yarn_cache_report.txt
+          retention-days: 7

@@ -1,0 +1,182 @@
+{
+  "ok": true,
+  "query": "in:alpha-pr-review \"ibrahimAlphaSquad/playwright\" \"#30\"",
+  "messages": {
+    "total": 4,
+    "pagination": {
+      "total_count": 4,
+      "page": 1,
+      "per_page": 20,
+      "page_count": 1,
+      "first": 1,
+      "last": 4
+    },
+    "paging": { "count": 20, "total": 4, "page": 1, "pages": 1 },
+    "matches": [
+      {
+        "iid": "d40164f7-d573-46c7-b5e7-8427b8380956",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": null,
+        "username": "github watcher",
+        "ts": "1746443090.732459",
+        "attachments": [
+          {
+            "id": 1,
+            "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "ts": 1746443090,
+            "color": "17a2b8",
+            "fallback": "A new PR Created with A lot of things #30",
+            "text": ":large_blue_circle: *New commits pushed by ibrahimAlphaSquad*\n\n*Commit SHA:* `58a3415d77188652adf8a2cacaf016d070fa2677`\n*Commit message:* 12",
+            "pretext": "*ibrahimAlphaSquad/playwright*",
+            "title": "A new PR Created with A lot of things #30",
+            "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/30",
+            "footer": "GitHub Actions",
+            "mrkdwn_in": ["pretext", "text"]
+          }
+        ],
+        "text": "",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746443090732459",
+        "no_reactions": true
+      },
+      {
+        "iid": "6cb86c77-e995-4a51-b266-787ff4e3c41c",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": null,
+        "username": "github watcher",
+        "ts": "1746442857.011949",
+        "attachments": [
+          {
+            "id": 1,
+            "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "ts": 1746442856,
+            "color": "17a2b8",
+            "fallback": "A new PR Created with A lot of things #30",
+            "text": ":large_blue_circle: *New commits pushed by ibrahimAlphaSquad*\n\n*Commit SHA:* `ca09647ad7186416f20a0a2328ad7698dd7c6312`\n*Commit message:* 11",
+            "pretext": "*ibrahimAlphaSquad/playwright*",
+            "title": "A new PR Created with A lot of things #30",
+            "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/30",
+            "footer": "GitHub Actions",
+            "mrkdwn_in": ["pretext", "text"]
+          }
+        ],
+        "text": "",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746442857011949",
+        "no_reactions": true
+      },
+      {
+        "iid": "6589a2ad-f660-4a33-a71d-c5c740a4129d",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": null,
+        "username": "github watcher",
+        "ts": "1746440680.760899",
+        "attachments": [
+          {
+            "id": 1,
+            "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "ts": 1746440680,
+            "color": "28a745",
+            "fallback": "A new PR Created with A lot of things #30",
+            "text": ":large_green_circle: *New PR opened by ibrahimAlphaSquad*\n\n*Title:* A new PR Created with A lot of things\n*Branch:* slack-notifications-test \u2192 main\n*Author:* ibrahimAlphaSquad\n*Created:* 2025-05-05 10:24:30 UTC\n\n*Description:*",
+            "pretext": "*ibrahimAlphaSquad/playwright*",
+            "title": "A new PR Created with A lot of things #30",
+            "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/30",
+            "footer": "GitHub Actions",
+            "mrkdwn_in": ["pretext", "text"]
+          }
+        ],
+        "text": "",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746440680760899",
+        "no_reactions": true
+      },
+      {
+        "iid": "8fc2c9a4-53f0-4247-8175-789409bc7577",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": null,
+        "username": "github watcher",
+        "ts": "1746440680.337569",
+        "attachments": [
+          {
+            "id": 1,
+            "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "ts": 1746440679,
+            "color": "007bff",
+            "fallback": "A new PR Created with A lot of things #30",
+            "text": ":eyes: *Review requested from junaid-alyyy by ibrahimAlphaSquad*\n\n*Title:* A new PR Created with A lot of things\n*Branch:* slack-notifications-test \u2192 main\n*Author:* ibrahimAlphaSquad\n*Created:* 2025-05-05 10:24:30 UTC\n\n*Reviewer:* junaid-alyyy\n*Requested by:* ibrahimAlphaSquad\n*Time:* 2025-05-05 10:24:39 UTC",
+            "pretext": "*ibrahimAlphaSquad/playwright*",
+            "title": "A new PR Created with A lot of things #30",
+            "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/30",
+            "footer": "GitHub Actions",
+            "mrkdwn_in": ["pretext", "text"]
+          }
+        ],
+        "text": "",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746440680337569",
+        "no_reactions": true
+      }
+    ]
+  }
+}

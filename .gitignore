@@ -35,6 +35,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Playwright e2e test
-/playwright-report
-/test-results
+# Notes
+.txt
+txt
+slack channel messages.txt

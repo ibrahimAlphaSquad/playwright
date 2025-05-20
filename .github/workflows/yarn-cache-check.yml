@@ -1,0 +1,57 @@
+name: Yarn Cache Check and Cleanup
+
+on:
+  schedule:
+    - cron: '20 * * * *'
+  workflow_dispatch: 
+
+jobs:
+  yarn-cache-management:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install Yarn Package Manager
+        run: npm install -g yarn
+
+      - name: Check Yarn Cache Size
+        id: cache_size
+        run: |
+          CACHE_DIR=$(yarn cache dir)
+          CACHE_SIZE=$(du -sh $CACHE_DIR | awk '{print $1}')
+          echo "Current Yarn cache size: $CACHE_SIZE"
+          echo "cache_size=$CACHE_SIZE" >> $GITHUB_ENV
+          echo "Yarn Cache Size: $CACHE_SIZE" > yarn_cache_report.txt
+
+      - name: Analyze Yarn Cache
+        run: |
+          echo "Performing Yarn cache analysis..." >> yarn_cache_report.txt
+          yarn cache list >> yarn_cache_report.txt
+
+      - name: Clear Yarn Cache if Threshold Exceeded
+        if: ${{ steps.cache_size.outputs.cache_size > '500M' }}
+        run: |
+          echo "Cache size exceeds 500MB. Clearing cache..." >> yarn_cache_report.txt
+          yarn cache clean
+          echo "Yarn cache cleared." >> yarn_cache_report.txt
+
+      - name: Display Post-Cleanup Cache Size
+        run: |
+          CACHE_DIR=$(yarn cache dir)
+          CACHE_SIZE=$(du -sh $CACHE_DIR | awk '{print $1}')
+          echo "Post-cleanup Yarn cache size: $CACHE_SIZE"
+          echo "Post-cleanup Yarn cache size: $CACHE_SIZE" >> yarn_cache_report.txt
+
+      - name: Upload Yarn Cache Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: cache-size-${{ env.cache_size }}
+          path: yarn_cache_report.txt
+          retention-days: 7

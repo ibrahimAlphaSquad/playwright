@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "channel": "C08R6EB1DEU",
+  "ts": "1746744173.515959",
+  "message": {
+    "user": "U05SBF23AN7",
+    "type": "message",
+    "ts": "1746744173.515959",
+    "bot_id": "B08QY8NELS1",
+    "app_id": "A08R6JKD30Q",
+    "text": "",
+    "team": "TFLUGNR63",
+    "bot_profile": {
+      "id": "B08QY8NELS1",
+      "app_id": "A08R6JKD30Q",
+      "name": "Github Watcher",
+      "icons": {
+        "image_36": "https://a.slack-edge.com/80588/img/plugins/app/bot_36.png",
+        "image_48": "https://a.slack-edge.com/80588/img/plugins/app/bot_48.png",
+        "image_72": "https://a.slack-edge.com/80588/img/plugins/app/service_72.png"
+      },
+      "deleted": false,
+      "updated": 1746476022,
+      "team_id": "TFLUGNR63"
+    },
+    "attachments": [
+      {
+        "id": 1,
+        "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+        "ts": 1746744173,
+        "color": "28a745",
+        "fallback": "Slack notifications test #53",
+        "text": ":eyes: *YO, NEW PR JUST DROPPED!*\n\n*Title:* Slack notifications test\n*Branch:* slack-notifications-test \u2192 main\n*Author:* ibrahimAlphaSquad\n*Created:* 2025-05-08 22:42:44 UTC\n\n*Description:*",
+        "pretext": "*ibrahimAlphaSquad/playwright*",
+        "title": "Slack notifications test #53",
+        "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/53",
+        "footer": "GitHub Actions \u2022 Thread-Key: ibrahimAlphaSquad/playwright-pr-53",
+        "mrkdwn_in": ["footer", "pretext", "text"]
+      }
+    ]
+  }
+}

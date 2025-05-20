@@ -1,0 +1,44 @@
+graph TD
+    A[GitHub Events:<br>PR, Review, Comment,<br>Discussion, Discussion Comment] --> B{Event Type?}
+
+    B -- pull_request: opened --> C[Job: notify_pr_creation]
+    B -- Other Events --> D[Job: notify_other_events]
+
+    C --> C1[Create PR Thread ID]
+    C1 --> C2[Set PR Creation Message]
+    C2 --> C3[Send Initial Slack Notification<br>(No thread_ts)]
+    C3 --> C4[Store Thread Key in PR Comment<br>(Thread_ts NOT captured/stored)]
+    C4 --> E[End Job]
+
+    D --> D0[Wait (sleep 5)]
+    D0 --> D1[Create Thread ID<br>(PR or Discussion)]
+    D1 --> D2{Event is PR/Review/Comment?}
+
+    D2 -- Yes --> D3[Find Thread Info in PR Comment<br>(Finds KEY, not TS)]
+    D3 --> D4{Marker Comment Found<br>(Key Found)?}
+    D4 -- No --> D5[Search Slack for Thread ID<br>(Uses API, finds thread_ts)]
+    D4 -- Yes --> D5
+    D3 -- No --> D5
+
+    D5 --> D6{Slack Search Successful<br>(thread_ts Found)?}
+
+    D6 -- Yes --> D7[Set Event Message<br>(Based on Event Type)]
+    D6 -- No --> D7[Set Event Message<br>(Based on Event Type)]
+
+    D7 --> D8[Set Slack Title/Link<br>(PR or Discussion)]
+    D8 --> D9{Thread Found?}
+
+    D9 -- Yes --> D10[Send Slack Notification<br>(AS REPLY using thread_ts)]
+    D9 -- No --> D11[Send Slack Notification<br>(STAND-ALONE message)]
+
+    D10 --> D12[Debugging Information]
+    D11 --> D12
+    D12 --> F[End Job]
+
+    style C fill:#f9f,stroke:#333,stroke-width:2px
+    style D fill:#ccf,stroke:#333,stroke-width:2px
+    style C3 fill:#afa,stroke:#333,stroke-width:2px
+    style C4 fill:#f9f,stroke:#333,stroke-width:2px
+    style D5 fill:#ff9,stroke:#333,stroke-width:2px
+    style D10 fill:#afa,stroke:#333,stroke-width:2px
+    style D11 fill:#f77,stroke:#333,stroke-width:2px

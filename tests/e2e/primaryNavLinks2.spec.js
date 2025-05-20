@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import login from './login';
 
 test.describe('Primary Nav Links', () => {
@@ -7,8 +7,8 @@ test.describe('Primary Nav Links', () => {
     });
 
     test('Clicking on all the Primary Nav buttons', async ({ page }) => {
-        // Click on Casino button & wait to load Lobby page
-        // Search
+        //Click on Casino button & wait to load Lobby page
+        //  Search
         await page.locator('#primary-nav-search-desktop').waitFor({ state: 'visible' });
         await page.locator('#primary-nav-search-desktop').click();
         // Search Close

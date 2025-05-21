@@ -34,10 +34,11 @@ jobs:
           mkdir -p ${{ github.workspace }}/zap-reports # Create directory for reports
           # Ensure your automation-plan.yaml is in the.zap directory of your repository
           # The plan should configure report output to /zap/reports/
+          # The next line allows ZAP in Docker to access localhost services
           docker run --rm \
             -v ${{ github.workspace }}:/zap/wrk/:rw \
             -v ${{ github.workspace }}/zap-reports:/zap/reports/:rw \
-            --network="host" \ # Allows ZAP in Docker to access localhost services
+            --network="host" \
             ghcr.io/zaproxy/zaproxy:stable zap.sh -cmd -autorun /zap/wrk/.zap/automation-plan.yaml
 
       - name: Upload ZAP AF Report

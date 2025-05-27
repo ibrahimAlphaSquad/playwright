@@ -84,7 +84,7 @@ jobs:
         continue-on-error: true
 
   tag_on_direct_push:
-    if: github.event_name == 'push' && !startsWith(github.event.head_commit.message, 'Merge pull request')
+    if: github.event_name == 'push' && github.actor != 'web-flow'
     runs-on: ubuntu-latest
 
     steps:

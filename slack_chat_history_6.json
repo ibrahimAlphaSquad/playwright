@@ -1,0 +1,59 @@
+{
+  "ok": true,
+  "query": "in:alpha-pr-review \"ibrahimAlphaSquad/playwright-pr-47\"",
+  "messages": {
+    "total": 1,
+    "pagination": {
+      "total_count": 1,
+      "page": 1,
+      "per_page": 20,
+      "page_count": 1,
+      "first": 1,
+      "last": 1
+    },
+    "paging": { "count": 20, "total": 1, "page": 1, "pages": 1 },
+    "matches": [
+      {
+        "iid": "4b7f2b7e-f375-440b-91a2-295b9e769481",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": null,
+        "username": "github watcher",
+        "ts": "1746737568.349219",
+        "attachments": [
+          {
+            "id": 1,
+            "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "ts": 1746737567,
+            "color": "28a745",
+            "fallback": "Slack notifications test #47",
+            "text": ":eyes: *YO, NEW PR JUST DROPPED!*\n\n*Title:* Slack notifications test\n*Branch:* slack-notifications-test \u2192 main\n*Author:* ibrahimAlphaSquad\n*Created:* 2025-05-08 20:52:37 UTC\n\n*Description:*",
+            "pretext": "*ibrahimAlphaSquad/playwright*",
+            "title": "Slack notifications test #47",
+            "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/47",
+            "footer": "GitHub Actions \u2022 Thread-Key: ibrahimAlphaSquad/playwright-pr-47",
+            "mrkdwn_in": ["footer", "pretext", "text"]
+          }
+        ],
+        "text": "",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746737568349219",
+        "no_reactions": true
+      }
+    ]
+  }
+}

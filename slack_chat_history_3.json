@@ -1,0 +1,44 @@
+{
+  "ok": true,
+  "query": "in:alpha-pr-review",
+  "messages": {
+    "total": 47,
+    "pagination": {
+      "total_count": 47,
+      "page": 1,
+      "per_page": 1,
+      "page_count": 47,
+      "first": 1,
+      "last": 1
+    },
+    "paging": { "count": 1, "total": 47, "page": 1, "pages": 47 },
+    "matches": [
+      {
+        "iid": "599de48e-9eab-476d-8e84-69354574c342",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": "U05SBF23AN7",
+        "username": "mibrahim.alphasquad",
+        "ts": "1746476022.223109",
+        "text": "added an integration to this channel: <https://iintellect-usa.slack.com/services/B08QY8NDPJR|Github Watcher>",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746476022223109",
+        "no_reactions": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,592 @@
+{
+  "ok": true,
+  "query": "in:alpha-pr-review \"ibrahimAlphaSquad/playwright-pr-46\"",
+  "messages": {
+    "total": 14,
+    "pagination": {
+      "total_count": 14,
+      "page": 1,
+      "per_page": 20,
+      "page_count": 1,
+      "first": 1,
+      "last": 14
+    },
+    "paging": { "count": 20, "total": 14, "page": 1, "pages": 1 },
+    "matches": [
+      {
+        "iid": "aa183647-715d-4372-8938-a2c27b695436",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": null,
+        "username": "github watcher",
+        "ts": "1746723004.065979",
+        "attachments": [
+          {
+            "id": 1,
+            "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "ts": 1746723003,
+            "color": "ff9800",
+            "fallback": "Slack notifications test #46",
+            "text": ":label: *VIBE CHECK: NEW LABEL ADDED*\n\n*Title:* Slack notifications test\n*Branch:* slack-notifications-test \u2192 main\n*Author:* ibrahimAlphaSquad\n*Created:* 2025-05-08 16:49:50 UTC\n\n*Label added:* bug\n*Added by:* ibrahimAlphaSquad\n*Time:* 2025-05-08 16:50:03 UTC",
+            "pretext": "*ibrahimAlphaSquad/playwright*",
+            "title": "Slack notifications test #46",
+            "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/46",
+            "footer": "GitHub Actions \u2022 Thread-Key: ibrahimAlphaSquad/playwright-pr-46",
+            "mrkdwn_in": ["footer", "pretext", "text"]
+          }
+        ],
+        "text": "",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746723004065979",
+        "no_reactions": true
+      },
+      {
+        "iid": "3874e6a0-d001-4fd6-a78c-5df905bf6939",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": null,
+        "username": "github watcher",
+        "ts": "1746723003.859509",
+        "attachments": [
+          {
+            "id": 1,
+            "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "ts": 1746723003,
+            "color": "ff9800",
+            "fallback": "Slack notifications test #46",
+            "text": ":label: *VIBE CHECK: NEW LABEL ADDED*\n\n*Title:* Slack notifications test\n*Branch:* slack-notifications-test \u2192 main\n*Author:* ibrahimAlphaSquad\n*Created:* 2025-05-08 16:49:50 UTC\n\n*Label added:* documentation\n*Added by:* ibrahimAlphaSquad\n*Time:* 2025-05-08 16:50:03 UTC",
+            "pretext": "*ibrahimAlphaSquad/playwright*",
+            "title": "Slack notifications test #46",
+            "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/46",
+            "footer": "GitHub Actions \u2022 Thread-Key: ibrahimAlphaSquad/playwright-pr-46",
+            "mrkdwn_in": ["footer", "pretext", "text"]
+          }
+        ],
+        "text": "",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746723003859509",
+        "no_reactions": true
+      },
+      {
+        "iid": "36ff0815-3359-4477-89d8-97a9231523d6",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": null,
+        "username": "github watcher",
+        "ts": "1746723003.671069",
+        "attachments": [
+          {
+            "id": 1,
+            "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "ts": 1746723003,
+            "color": "ff9800",
+            "fallback": "Slack notifications test #46",
+            "text": ":label: *VIBE CHECK: NEW LABEL ADDED*\n\n*Title:* Slack notifications test\n*Branch:* slack-notifications-test \u2192 main\n*Author:* ibrahimAlphaSquad\n*Created:* 2025-05-08 16:49:50 UTC\n\n*Label added:* Testing\n*Added by:* ibrahimAlphaSquad\n*Time:* 2025-05-08 16:50:03 UTC",
+            "pretext": "*ibrahimAlphaSquad/playwright*",
+            "title": "Slack notifications test #46",
+            "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/46",
+            "footer": "GitHub Actions \u2022 Thread-Key: ibrahimAlphaSquad/playwright-pr-46",
+            "mrkdwn_in": ["footer", "pretext", "text"]
+          }
+        ],
+        "text": "",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746723003671069",
+        "no_reactions": true
+      },
+      {
+        "iid": "785e6f7d-ba4a-4f73-897a-3dd61974f031",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": null,
+        "username": "github watcher",
+        "ts": "1746723003.514279",
+        "attachments": [
+          {
+            "id": 1,
+            "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "ts": 1746723003,
+            "color": "007bff",
+            "fallback": "Slack notifications test #46",
+            "text": ":100: *NEED UR EYES ON THIS, FAM*\n\n*Title:* Slack notifications test\n*Branch:* slack-notifications-test \u2192 main\n*Author:* ibrahimAlphaSquad\n*Created:* 2025-05-08 16:49:50 UTC\n\n*Reviewer:* Ahtisham-01\n*Requested by:* ibrahimAlphaSquad\n*Time:* 2025-05-08 16:50:03 UTC",
+            "pretext": "*ibrahimAlphaSquad/playwright*",
+            "title": "Slack notifications test #46",
+            "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/46",
+            "footer": "GitHub Actions \u2022 Thread-Key: ibrahimAlphaSquad/playwright-pr-46",
+            "mrkdwn_in": ["footer", "pretext", "text"]
+          }
+        ],
+        "text": "",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746723003514279",
+        "no_reactions": true
+      },
+      {
+        "iid": "d7f0915c-1884-4108-afd3-89120aa1a707",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": null,
+        "username": "github watcher",
+        "ts": "1746723003.102059",
+        "attachments": [
+          {
+            "id": 1,
+            "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "ts": 1746723002,
+            "color": "ff9800",
+            "fallback": "Slack notifications test #46",
+            "text": ":label: *VIBE CHECK: NEW LABEL ADDED*\n\n*Title:* Slack notifications test\n*Branch:* slack-notifications-test \u2192 main\n*Author:* ibrahimAlphaSquad\n*Created:* 2025-05-08 16:49:50 UTC\n\n*Label added:* help wanted\n*Added by:* ibrahimAlphaSquad\n*Time:* 2025-05-08 16:50:02 UTC",
+            "pretext": "*ibrahimAlphaSquad/playwright*",
+            "title": "Slack notifications test #46",
+            "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/46",
+            "footer": "GitHub Actions \u2022 Thread-Key: ibrahimAlphaSquad/playwright-pr-46",
+            "mrkdwn_in": ["footer", "pretext", "text"]
+          }
+        ],
+        "text": "",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746723003102059",
+        "no_reactions": true
+      },
+      {
+        "iid": "cdba4781-6308-4dd8-adfe-f919281c1045",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": null,
+        "username": "github watcher",
+        "ts": "1746723002.828279",
+        "attachments": [
+          {
+            "id": 1,
+            "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "ts": 1746723002,
+            "color": "ff9800",
+            "fallback": "Slack notifications test #46",
+            "text": ":label: *VIBE CHECK: NEW LABEL ADDED*\n\n*Title:* Slack notifications test\n*Branch:* slack-notifications-test \u2192 main\n*Author:* ibrahimAlphaSquad\n*Created:* 2025-05-08 16:49:50 UTC\n\n*Label added:* invalid\n*Added by:* ibrahimAlphaSquad\n*Time:* 2025-05-08 16:50:02 UTC",
+            "pretext": "*ibrahimAlphaSquad/playwright*",
+            "title": "Slack notifications test #46",
+            "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/46",
+            "footer": "GitHub Actions \u2022 Thread-Key: ibrahimAlphaSquad/playwright-pr-46",
+            "mrkdwn_in": ["footer", "pretext", "text"]
+          }
+        ],
+        "text": "",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746723002828279",
+        "no_reactions": true
+      },
+      {
+        "iid": "3a32bdbe-dd51-4096-a1eb-a72c2836eb7c",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": null,
+        "username": "github watcher",
+        "ts": "1746723002.501959",
+        "attachments": [
+          {
+            "id": 1,
+            "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "ts": 1746723002,
+            "color": "ff9800",
+            "fallback": "Slack notifications test #46",
+            "text": ":label: *VIBE CHECK: NEW LABEL ADDED*\n\n*Title:* Slack notifications test\n*Branch:* slack-notifications-test \u2192 main\n*Author:* ibrahimAlphaSquad\n*Created:* 2025-05-08 16:49:50 UTC\n\n*Label added:* enhancement\n*Added by:* ibrahimAlphaSquad\n*Time:* 2025-05-08 16:50:02 UTC",
+            "pretext": "*ibrahimAlphaSquad/playwright*",
+            "title": "Slack notifications test #46",
+            "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/46",
+            "footer": "GitHub Actions \u2022 Thread-Key: ibrahimAlphaSquad/playwright-pr-46",
+            "mrkdwn_in": ["footer", "pretext", "text"]
+          }
+        ],
+        "text": "",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746723002501959",
+        "no_reactions": true
+      },
+      {
+        "iid": "da94c3e1-3e1d-44a8-ac09-ab87841ba107",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": null,
+        "username": "github watcher",
+        "ts": "1746723002.472479",
+        "attachments": [
+          {
+            "id": 1,
+            "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "ts": 1746723001,
+            "color": "ff9800",
+            "fallback": "Slack notifications test #46",
+            "text": ":label: *VIBE CHECK: NEW LABEL ADDED*\n\n*Title:* Slack notifications test\n*Branch:* slack-notifications-test \u2192 main\n*Author:* ibrahimAlphaSquad\n*Created:* 2025-05-08 16:49:50 UTC\n\n*Label added:* good first issue\n*Added by:* ibrahimAlphaSquad\n*Time:* 2025-05-08 16:50:01 UTC",
+            "pretext": "*ibrahimAlphaSquad/playwright*",
+            "title": "Slack notifications test #46",
+            "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/46",
+            "footer": "GitHub Actions \u2022 Thread-Key: ibrahimAlphaSquad/playwright-pr-46",
+            "mrkdwn_in": ["footer", "pretext", "text"]
+          }
+        ],
+        "text": "",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746723002472479",
+        "no_reactions": true
+      },
+      {
+        "iid": "469342cb-b199-4454-811a-e400d6b8542a",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": null,
+        "username": "github watcher",
+        "ts": "1746723001.918189",
+        "attachments": [
+          {
+            "id": 1,
+            "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "ts": 1746723001,
+            "color": "ff9800",
+            "fallback": "Slack notifications test #46",
+            "text": ":label: *VIBE CHECK: NEW LABEL ADDED*\n\n*Title:* Slack notifications test\n*Branch:* slack-notifications-test \u2192 main\n*Author:* ibrahimAlphaSquad\n*Created:* 2025-05-08 16:49:50 UTC\n\n*Label added:* duplicate\n*Added by:* ibrahimAlphaSquad\n*Time:* 2025-05-08 16:50:01 UTC",
+            "pretext": "*ibrahimAlphaSquad/playwright*",
+            "title": "Slack notifications test #46",
+            "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/46",
+            "footer": "GitHub Actions \u2022 Thread-Key: ibrahimAlphaSquad/playwright-pr-46",
+            "mrkdwn_in": ["footer", "pretext", "text"]
+          }
+        ],
+        "text": "",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746723001918189",
+        "no_reactions": true
+      },
+      {
+        "iid": "2474d2e7-fbd5-4f32-875c-6979f296dc68",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": null,
+        "username": "github watcher",
+        "ts": "1746723001.805029",
+        "attachments": [
+          {
+            "id": 1,
+            "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "ts": 1746723001,
+            "color": "ff9800",
+            "fallback": "Slack notifications test #46",
+            "text": ":label: *VIBE CHECK: NEW LABEL ADDED*\n\n*Title:* Slack notifications test\n*Branch:* slack-notifications-test \u2192 main\n*Author:* ibrahimAlphaSquad\n*Created:* 2025-05-08 16:49:50 UTC\n\n*Label added:* question\n*Added by:* ibrahimAlphaSquad\n*Time:* 2025-05-08 16:50:01 UTC",
+            "pretext": "*ibrahimAlphaSquad/playwright*",
+            "title": "Slack notifications test #46",
+            "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/46",
+            "footer": "GitHub Actions \u2022 Thread-Key: ibrahimAlphaSquad/playwright-pr-46",
+            "mrkdwn_in": ["footer", "pretext", "text"]
+          }
+        ],
+        "text": "",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746723001805029",
+        "no_reactions": true
+      },
+      {
+        "iid": "ad71801d-bc86-43e8-952e-3b6ec21b7626",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": null,
+        "username": "github watcher",
+        "ts": "1746723001.732429",
+        "attachments": [
+          {
+            "id": 1,
+            "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "ts": 1746723001,
+            "color": "9c27b0",
+            "fallback": "Slack notifications test #46",
+            "text": ":point_right: *THIS ONE'S YOURS NOW, NO CAP*\n\n*Title:* Slack notifications test\n*Branch:* slack-notifications-test \u2192 main\n*Author:* ibrahimAlphaSquad\n*Created:* 2025-05-08 16:49:50 UTC\n\n*Assigned to:* ibrahimAlphaSquad\n*Assigned by:* ibrahimAlphaSquad\n*Time:* 2025-05-08 16:50:01 UTC",
+            "pretext": "*ibrahimAlphaSquad/playwright*",
+            "title": "Slack notifications test #46",
+            "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/46",
+            "footer": "GitHub Actions \u2022 Thread-Key: ibrahimAlphaSquad/playwright-pr-46",
+            "mrkdwn_in": ["footer", "pretext", "text"]
+          }
+        ],
+        "text": "",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746723001732429",
+        "no_reactions": true
+      },
+      {
+        "iid": "c5ae43ea-b1a7-4dbb-8217-4eeaeffca929",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": null,
+        "username": "github watcher",
+        "ts": "1746723001.330369",
+        "attachments": [
+          {
+            "id": 1,
+            "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "ts": 1746723000,
+            "color": "ff9800",
+            "fallback": "Slack notifications test #46",
+            "text": ":label: *VIBE CHECK: NEW LABEL ADDED*\n\n*Title:* Slack notifications test\n*Branch:* slack-notifications-test \u2192 main\n*Author:* ibrahimAlphaSquad\n*Created:* 2025-05-08 16:49:50 UTC\n\n*Label added:* CI\n*Added by:* ibrahimAlphaSquad\n*Time:* 2025-05-08 16:50:00 UTC",
+            "pretext": "*ibrahimAlphaSquad/playwright*",
+            "title": "Slack notifications test #46",
+            "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/46",
+            "footer": "GitHub Actions \u2022 Thread-Key: ibrahimAlphaSquad/playwright-pr-46",
+            "mrkdwn_in": ["footer", "pretext", "text"]
+          }
+        ],
+        "text": "",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746723001330369",
+        "no_reactions": true
+      },
+      {
+        "iid": "3d8d8d75-07f4-4fe3-a11f-8645f887d79c",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": null,
+        "username": "github watcher",
+        "ts": "1746723001.172779",
+        "attachments": [
+          {
+            "id": 1,
+            "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "ts": 1746723000,
+            "color": "ff9800",
+            "fallback": "Slack notifications test #46",
+            "text": ":label: *VIBE CHECK: NEW LABEL ADDED*\n\n*Title:* Slack notifications test\n*Branch:* slack-notifications-test \u2192 main\n*Author:* ibrahimAlphaSquad\n*Created:* 2025-05-08 16:49:50 UTC\n\n*Label added:* wontfix\n*Added by:* ibrahimAlphaSquad\n*Time:* 2025-05-08 16:50:00 UTC",
+            "pretext": "*ibrahimAlphaSquad/playwright*",
+            "title": "Slack notifications test #46",
+            "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/46",
+            "footer": "GitHub Actions \u2022 Thread-Key: ibrahimAlphaSquad/playwright-pr-46",
+            "mrkdwn_in": ["footer", "pretext", "text"]
+          }
+        ],
+        "text": "",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746723001172779",
+        "no_reactions": true
+      },
+      {
+        "iid": "3c7590d0-d32a-477f-bd51-c86751d20652",
+        "team": "TFLUGNR63",
+        "score": 0,
+        "channel": {
+          "id": "C08R6EB1DEU",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "is_mpim": false,
+          "is_shared": false,
+          "is_org_shared": false,
+          "is_ext_shared": false,
+          "is_private": true,
+          "name": "alpha-pr-review",
+          "pending_shared": [],
+          "is_pending_ext_shared": false
+        },
+        "type": "message",
+        "user": null,
+        "username": "github watcher",
+        "ts": "1746723000.732449",
+        "attachments": [
+          {
+            "id": 1,
+            "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "ts": 1746723000,
+            "color": "28a745",
+            "fallback": "Slack notifications test #46",
+            "text": ":eyes: *YO, NEW PR JUST DROPPED!*\n\n*Title:* Slack notifications test\n*Branch:* slack-notifications-test \u2192 main\n*Author:* ibrahimAlphaSquad\n*Created:* 2025-05-08 16:49:50 UTC\n\n*Description:*",
+            "pretext": "*ibrahimAlphaSquad/playwright*",
+            "title": "Slack notifications test #46",
+            "title_link": "https://github.com/ibrahimAlphaSquad/playwright/pull/46",
+            "footer": "GitHub Actions \u2022 Thread-Key: ibrahimAlphaSquad/playwright-pr-46",
+            "mrkdwn_in": ["footer", "pretext", "text"]
+          }
+        ],
+        "text": "",
+        "permalink": "https://iintellect-usa.slack.com/archives/C08R6EB1DEU/p1746723000732449",
+        "no_reactions": true
+      }
+    ]
+  }
+}

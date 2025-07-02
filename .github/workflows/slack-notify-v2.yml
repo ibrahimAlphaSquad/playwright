@@ -2,11 +2,24 @@ name: Slack PR Notifications
 
 on:
   pull_request:
-    types: [opened, closed, reopened, synchronize, edited, assigned, unassigned]
+    types:
+      - opened
+      - closed
+      - reopened
+      - synchronize
+      - edited
+      - assigned
+      - unassigned
+      - labeled
+      - unlabeled
+      - converted_to_draft
+      - ready_for_review
+      - review_requested
+      - review_request_removed
   pull_request_review:
-    types: [submitted]
+    types: [submitted, edited, dismissed]
   pull_request_review_comment:
-    types: [created]
+    types: [created, edited, deleted]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
@@ -22,26 +35,60 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-            python-version: '3.11'
+          python-version: '3.11'
+
       - name: Install dependencies
         run: pip install requests
-        
+
+      - name: Set environment variables for Slack
+        run: |
+          ACTION="${{ github.event.action }}"
+          IS_NEW_PR=false
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" && "$ACTION" == "opened" ]]; then
+            IS_NEW_PR=true
+          fi
+
+          echo "IS_NEW_PR=$IS_NEW_PR" >> $GITHUB_ENV
+          echo "MESSAGE=GitHub Event: $GITHUB_EVENT_NAME, Action: $ACTION" >> $GITHUB_ENV
+          echo "COLOR=#28a745" >> $GITHUB_ENV
+
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            echo "THREAD_KEY=${{ github.repository }}-pr-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+            echo "TITLE=${{ github.event.pull_request.title }}" >> $GITHUB_ENV
+            echo "TITLE_LINK=${{ github.event.pull_request.html_url }}" >> $GITHUB_ENV
+            echo "NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          elif [[ "$GITHUB_EVENT_NAME" == "pull_request_review" ]]; then
+            echo "THREAD_KEY=${{ github.repository }}-pr-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+            echo "TITLE=${{ github.event.pull_request.title }}" >> $GITHUB_ENV
+            echo "TITLE_LINK=${{ github.event.pull_request.html_url }}" >> $GITHUB_ENV
+            echo "NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          elif [[ "$GITHUB_EVENT_NAME" == "pull_request_review_comment" ]]; then
+            echo "THREAD_KEY=${{ github.repository }}-pr-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+            echo "TITLE=${{ github.event.pull_request.title }}" >> $GITHUB_ENV
+            echo "TITLE_LINK=${{ github.event.pull_request.html_url }}" >> $GITHUB_ENV
+            echo "NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          fi
+
+          echo "TIMESTAMP=$(date +%s)" >> $GITHUB_ENV
+
       - name: Send Slack notification
         run: python scripts/send_to_slack.py
         env:
-            SLACK_INCOMING_WEBHOOK_URL: ${{ vars.SLACK_INCOMING_WEBHOOK_URL }}
-            SLACK_USER_OAUTH_TOKEN: ${{ secrets.SLACK_USER_OAUTH_TOKEN }}
-            SLACK_CHANNEL: ${{ env.SLACK_CHANNEL }}
-            SLACK_CHANNEL_ID: ${{ env.SLACK_CHANNEL_ID }}
-            MESSAGE: ${{ env.MESSAGE }}
-            COLOR: ${{ env.COLOR }}
-            THREAD_KEY: ${{ env.THREAD_KEY }}
-            TITLE: ${{ env.TITLE }}
-            TITLE_LINK: ${{ env.TITLE_LINK }}
-            NUMBER: ${{ env.NUMBER }}
-            TIMESTAMP: ${{ env.TIMESTAMP }}
-            IS_NEW_PR: ${{ github.event.action == 'opened' && 'true' || 'false' }}
-
+          SLACK_INCOMING_WEBHOOK_URL: ${{ secrets.SLACK_INCOMING_WEBHOOK_URL }}
+          SLACK_USER_OAUTH_TOKEN: ${{ secrets.SLACK_USER_OAUTH_TOKEN }}
+          SLACK_CHANNEL: ${{ env.SLACK_CHANNEL }}
+          SLACK_CHANNEL_ID: ${{ env.SLACK_CHANNEL_ID }}
+          MESSAGE: ${{ env.MESSAGE }}
+          COLOR: ${{ env.COLOR }}
+          THREAD_KEY: ${{ env.THREAD_KEY }}
+          TITLE: ${{ env.TITLE }}
+          TITLE_LINK: ${{ env.TITLE_LINK }}
+          NUMBER: ${{ env.NUMBER }}
+          TIMESTAMP: ${{ env.TIMESTAMP }}
+          IS_NEW_PR: ${{ env.IS_NEW_PR }}

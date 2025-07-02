@@ -8,7 +8,7 @@ def main():
     is_new_pr = os.getenv("IS_NEW_PR") == "true"
     thread_key = os.getenv("THREAD_KEY")
     channel = os.getenv("SLACK_CHANNEL")
-    slack_token = os.getenv("SLACK_USER_OAUTH_TOKEN")  # must be set as secret
+    slack_token = os.getenv("SLACK_USER_OAUTH_TOKEN")
 
     # For non-new PRs: find original thread via Slack search
     thread_ts = None
@@ -36,6 +36,9 @@ def main():
         payload["thread_ts"] = thread_ts
 
     webhook_url = os.getenv("SLACK_INCOMING_WEBHOOK_URL")
+    if not webhook_url:
+        raise Exception("Missing SLACK_INCOMING_WEBHOOK_URL environment variable")
+
     response = requests.post(webhook_url, json=payload)
 
     if response.status_code != 200:

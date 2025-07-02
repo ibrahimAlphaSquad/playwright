@@ -1,6 +1,4 @@
-import os
 import requests
-import json
 
 def search_slack_thread(slack_token, channel, thread_key):
     query = f'in:{channel} "{thread_key}"'

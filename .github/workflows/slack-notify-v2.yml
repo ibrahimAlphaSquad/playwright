@@ -1,0 +1,47 @@
+name: Slack PR Notifications
+
+on:
+  pull_request:
+    types: [opened, closed, reopened, synchronize, edited, assigned, unassigned]
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: false
+
+env:
+  SLACK_CHANNEL: alpha-pr-review
+  SLACK_API_URL: 'https://slack.com/api/chat.postMessage'
+  SLACK_CHANNEL_ID: "C08R6EB1DEU"
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+            python-version: '3.11'
+      - name: Install dependencies
+        run: pip install requests
+        
+      - name: Send Slack notification
+        run: python scripts/send_to_slack.py
+        env:
+            SLACK_INCOMING_WEBHOOK_URL: ${{ vars.SLACK_INCOMING_WEBHOOK_URL }}
+            SLACK_USER_OAUTH_TOKEN: ${{ secrets.SLACK_USER_OAUTH_TOKEN }}
+            SLACK_CHANNEL: ${{ env.SLACK_CHANNEL }}
+            SLACK_CHANNEL_ID: ${{ env.SLACK_CHANNEL_ID }}
+            MESSAGE: ${{ env.MESSAGE }}
+            COLOR: ${{ env.COLOR }}
+            THREAD_KEY: ${{ env.THREAD_KEY }}
+            TITLE: ${{ env.TITLE }}
+            TITLE_LINK: ${{ env.TITLE_LINK }}
+            NUMBER: ${{ env.NUMBER }}
+            TIMESTAMP: ${{ env.TIMESTAMP }}
+            IS_NEW_PR: ${{ github.event.action == 'opened' && 'true' || 'false' }}
+

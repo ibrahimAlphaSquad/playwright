@@ -1,0 +1,31 @@
+env:
+  contexts:
+    - name: "playwright-context"
+      urls:
+        - "https://playwright-eta.vercel.app/"
+      includePaths: []
+      excludePaths: []
+  parameters:
+    failOnError: true
+    failOnWarning: false
+    progressToStdout: true
+jobs:
+  - type: spiderAjax
+    parameters:
+      maxDepth: 5
+      contextName: "playwright-context"
+      maxCrawlDepth: 10
+      maxDuration: 10
+      handleParameters: "ignore"
+  - type: activeScan
+    parameters:
+      context: "playwright-context"
+      policy: "Default Policy"
+      maxRuleDurationInMins: 5
+  - type: report
+    parameters:
+      template: "traditional-html"
+      reportDir: "/zap/wrk"
+      reportFile: "report.html"
+      reportTitle: "ZAP Active Scan Report for Playwright ETA"
+      displayReport: false

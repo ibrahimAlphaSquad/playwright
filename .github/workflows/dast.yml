@@ -24,10 +24,15 @@ jobs:
           mkdir -p playwright/zap-reports playwright/zap-home
           chmod -R 777 playwright/zap-reports playwright/zap-home
 
+      - name: Verify target accessibility
+        run: |
+          echo "Checking accessibility of https://playwright-eta.vercel.app/"
+          curl -I https://playwright-eta.vercel.app/ || echo "Warning: Target may not be accessible"
+
       - name: Run ZAP Active Scan
         run: |
           echo "Starting ZAP Active Scan..."
-          docker run -v $(pwd)/playwright/zap-reports:/zap/wrk:rw -v $(pwd)/playwright/zap-home:/zap/.ZAP:rw ghcr.io/zaproxy/zaproxy:stable zap.sh -cmd -quickurl https://your-target-app.com -quickattack -quickout /zap/wrk/report.html
+          docker run -v $(pwd)/playwright/zap-reports:/zap/wrk:rw -v $(pwd)/playwright/zap-home:/zap/.ZAP:rw -v $(pwd)/zap-active-scan.yaml:/zap/wrk/zap-active-scan.yaml:ro ghcr.io/zaproxy/zaproxy:stable zap.sh -cmd -autorun /zap/wrk/zap-active-scan.yaml
           echo "ZAP Active Scan completed"
           ls -la playwright/zap-reports/
 
@@ -51,3 +56,4 @@ jobs:
           compression-level: 6
           overwrite: false
           include-hidden-files: false
+          

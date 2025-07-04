@@ -15,10 +15,48 @@ permissions:
   pull-requests: read
 
 jobs:
+  zap_scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create directories for ZAP
+        run: |
+          mkdir -p zap-reports zap-home
+          chmod -R 777 zap-reports zap-home  # Ensure write permissions
+
+      - name: Run ZAP scan
+        run: |
+          echo "Starting ZAP scan..."
+          docker run -v $(pwd)/zap-reports:/zap/wrk:rw -v $(pwd)/zap-home:/zap/.ZAP:rw ghcr.io/zaproxy/zaproxy:stable zap.sh -cmd -quickurl https://your-target-app.com -quickout /zap/wrk/report.html
+          echo "ZAP scan completed"
+          ls -la zap-reports/
+
+      - name: Check ZAP scan results
+        run: |
+          echo "=== ZAP Scan Results ==="
+          ls -la zap-reports/
+          if [ -f zap-reports/report.html ]; then
+            echo "HTML report generated successfully"
+          else
+            echo "Warning: HTML report not found"
+          fi
+
+      - name: Upload ZAP scan reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-scan-reports-50
+          path: zap-reports/
+          if-no-files-found: warn
+          retention-days: 30
+          compression-level: 6
+          overwrite: false
+          include-hidden-files: false
+
   tag_on_pr_merge:
     if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -86,7 +124,6 @@ jobs:
   tag_on_direct_push:
     if: github.event_name == 'push' && github.actor != 'web-flow'
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

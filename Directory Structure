@@ -1,0 +1,18 @@
+# Directory Structure
+# -------------------
+# .github/
+# ├── workflows/
+# │   └── slack-notify-v2.yml
+# scripts/
+# ├── send_to_slack.py
+# ├── slack_utils.py
+# └── thread_tracker.py
+
+# File: scripts/send_to_slack.py
+
+# File: scripts/slack_utils.py
+
+# File: scripts/thread_tracker.py (not used in current flow, optional for local fallback)
+
+
+# File: .github/workflows/slack-notify-v2.yml

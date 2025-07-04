@@ -17,12 +17,30 @@ on:
       - review_requested
       - review_request_removed
   pull_request_review:
-    types: [submitted, edited, dismissed]
+    types:
+      - submitted
+      - edited
+      - dismissed
   pull_request_review_comment:
-    types: [created, edited, deleted]
+    types:
+      - created
+      - edited
+      - deleted
+  discussion:
+    types:
+      - created
+      - edited
+      - deleted
+      - answered
+      - unanswered
+  discussion_comment:
+    types:
+      - created
+      - edited
+      - deleted
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number || github.sha }}-${{ github.run_id }}
   cancel-in-progress: false
 
 env:
@@ -75,6 +93,11 @@ jobs:
             echo "TITLE=${{ github.event.pull_request.title }}" >> $GITHUB_ENV
             echo "TITLE_LINK=${{ github.event.pull_request.html_url }}" >> $GITHUB_ENV
             echo "NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          elif [[ "$GITHUB_EVENT_NAME" == "discussion" || "$GITHUB_EVENT_NAME" == "discussion_comment" ]]; then
+            echo "THREAD_KEY=${{ github.repository }}-discussion-${{ github.event.discussion.number }}" >> $GITHUB_ENV
+            echo "TITLE=${{ github.event.discussion.title }}" >> $GITHUB_ENV
+            echo "TITLE_LINK=${{ github.event.discussion.html_url }}" >> $GITHUB_ENV
+            echo "NUMBER=${{ github.event.discussion.number }}" >> $GITHUB_ENV
           fi
 
           echo "TIMESTAMP=$(date +%s)" >> $GITHUB_ENV

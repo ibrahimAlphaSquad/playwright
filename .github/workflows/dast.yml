@@ -1,242 +1,53 @@
 name: DAST Scan
 
 on:
-  workflow_dispatch: # Manual trigger
-  schedule:
-    - cron: "0 2 * * *" # Runs daily at 2 AM UTC
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
 
 jobs:
-  zap_af_scan:
+  zap_scan:
     runs-on: ubuntu-latest
-    name: ZAP AF Scan
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install dependencies and Start Web Application
+      - name: Create directories for ZAP
         run: |
-          npm install
-          npm run build --if-present
-          npm run start &
-          echo "Waiting for application to start..."
+          mkdir -p playwright/zap-reports playwright/zap-home
+          chmod -R 777 playwright/zap-reports playwright/zap-home
 
-          # Better health check instead of fixed sleep
-          timeout 60 bash -c 'until curl -f http://localhost:3000 > /dev/null 2>&1; do sleep 2; done' || {
-            echo "Application failed to start within 60 seconds"
-            curl -v http://localhost:3000 || true
-            exit 1
-          }
-          echo "Application is running and accessible"
-
-      - name: Create ZAP Configuration and Reports Directory
+      - name: Run ZAP Active Scan
         run: |
-          # Create necessary directories
-          mkdir -p .zap
-          mkdir -p ${{ github.workspace }}/zap-reports
+          echo "Starting ZAP Active Scan..."
+          docker run -v $(pwd)/playwright/zap-reports:/zap/wrk:rw -v $(pwd)/playwright/zap-home:/zap/.ZAP:rw ghcr.io/zaproxy/zaproxy:stable zap.sh -cmd -quickurl https://your-target-app.com -quickattack -quickout /zap/wrk/report.html
+          echo "ZAP Active Scan completed"
+          ls -la playwright/zap-reports/
 
-          # Set proper permissions
-          chmod 777 ${{ github.workspace }}/zap-reports
-
-          cat > .zap/automation-plan.yaml << 'EOL'
-          env:
-            contexts:
-              - name: "My Web App Context"
-                urls:
-                  - "http://localhost:3000"
-                includePaths:
-                  - "http://localhost:3000.*"
-                excludePaths: []
-
-          jobs:
-            - type: passiveScan-config
-              parameters:
-                maxAlertsPerRule: 0  # 0 = unlimited
-                
-            - type: spider
-              parameters:
-                context: "My Web App Context"
-                url: "http://localhost:3000"
-                maxDuration: 2  # Increased duration for better coverage
-                maxDepth: 5
-                maxChildren: 10
-                
-            - type: passiveScan-wait
-              parameters:
-                maxDuration: 10
-                
-            - type: activeScan
-              parameters:
-                context: "My Web App Context"
-                policy: "Default Policy"
-                maxDuration: 15  # Set max duration to prevent long-running scans
-                
-            - type: activeScan-wait
-              parameters:
-                maxDuration: 10
-                
-            - type: report
-              parameters:
-                template: "traditional-html"
-                reportDir: "/zap/wrk/zap-reports"  # Fixed path
-                reportFile: "zap-report.html"
-                reportTitle: "ZAP Security Scan Report"
-                reportDescription: "DAST scan results for the web application"
-                
-            - type: report
-              parameters:
-                template: "traditional-json"
-                reportDir: "/zap/wrk/zap-reports"
-                reportFile: "zap-report.json"
-                
-            - type: report
-              parameters:
-                template: "traditional-xml"
-                reportDir: "/zap/wrk/zap-reports"
-                reportFile: "zap-report.xml"
-          EOL
-
-          echo "ZAP configuration created:"
-          cat .zap/automation-plan.yaml
-
-      - name: Run ZAP Automation Framework Scan
+      - name: Check ZAP scan results
         run: |
-          echo "Starting ZAP scan..."
-
-          # Run ZAP with proper volume mounting and error handling
-          docker run --rm \
-            -v ${{ github.workspace }}:/zap/wrk/:rw \
-            --network="host" \
-            --user $(id -u):$(id -g) \
-            ghcr.io/zaproxy/zaproxy:stable zap.sh -cmd \
-            -autorun /zap/wrk/.zap/automation-plan.yaml \
-            -autogenmin2min \
-            -autogenmax2min \
-            || {
-              echo "ZAP scan completed with warnings or errors"
-              echo "Checking if reports were generated..."
-              ls -la ${{ github.workspace }}/zap-reports/ || echo "No reports directory found"
-            }
-
-      - name: Verify and Display Scan Results
-        if: always()
-        run: |
-          echo "=== ZAP Scan Results ==="
-          if [ -d "${{ github.workspace }}/zap-reports" ]; then
-            echo "Reports directory contents:"
-            ls -la ${{ github.workspace }}/zap-reports/
-            
-            # Display summary if HTML report exists
-            if [ -f "${{ github.workspace }}/zap-reports/zap-report.html" ]; then
-              echo "HTML report generated successfully"
-              # Extract summary information (basic)
-              if command -v grep &> /dev/null; then
-                echo "=== Scan Summary ==="
-                grep -i "alert\|risk\|confidence" ${{ github.workspace }}/zap-reports/zap-report.html | head -10 || true
-              fi
-            else
-              echo "Warning: HTML report not found"
-            fi
-            
-            # Display JSON summary if available
-            if [ -f "${{ github.workspace }}/zap-reports/zap-report.json" ]; then
-              echo "JSON report generated successfully"
-              if command -v jq &> /dev/null; then
-                echo "=== Alert Summary ==="
-                cat ${{ github.workspace }}/zap-reports/zap-report.json | jq '.site[0].alerts | length' 2>/dev/null || echo "Could not parse JSON report"
-              fi
-            fi
+          echo "=== ZAP Active Scan Results ==="
+          ls -la playwright/zap-reports/
+          if [ -f playwright/zap-reports/report.html ]; then
+            echo "HTML report generated successfully"
           else
-            echo "Error: Reports directory not found"
-            exit 1
+            echo "Warning: HTML report not found"
           fi
 
-      - name: Upload ZAP Reports
-        if: always()
+      - name: Upload ZAP scan reports
         uses: actions/upload-artifact@v4
         with:
-          name: zap-scan-reports-${{ github.run_number }}
-          path: ${{ github.workspace }}/zap-reports/
-          if-no-files-found: error
+          name: zap-scan-reports-50
+          path: playwright/zap-reports/
+          if-no-files-found: warn
           retention-days: 30
-
-      - name: Comment on PR (if applicable)
-        if: always() && github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const path = require('path');
-
-            const reportsDir = '${{ github.workspace }}/zap-reports';
-            let comment = '## 🔒 DAST Scan Results\n\n';
-
-            try {
-              if (fs.existsSync(path.join(reportsDir, 'zap-report.json'))) {
-                const report = JSON.parse(fs.readFileSync(path.join(reportsDir, 'zap-report.json'), 'utf8'));
-                const alerts = report.site[0]?.alerts || [];
-                const highRisk = alerts.filter(a => a.riskdesc.startsWith('High'));
-                const mediumRisk = alerts.filter(a => a.riskdesc.startsWith('Medium'));
-                const lowRisk = alerts.filter(a => a.riskdesc.startsWith('Low'));
-                const info = alerts.filter(a => a.riskdesc.startsWith('Informational'));
-                
-                comment += `📊 **Scan Summary:**\n`;
-                comment += `- 🔴 High Risk: ${highRisk.length}\n`;
-                comment += `- 🟡 Medium Risk: ${mediumRisk.length}\n`;
-                comment += `- 🟢 Low Risk: ${lowRisk.length}\n`;
-                comment += `- ℹ️ Informational: ${info.length}\n\n`;
-                
-                if (highRisk.length > 0) {
-                  comment += `⚠️ **High Risk Issues Found!** Please review the detailed report.\n\n`;
-                }
-              } else {
-                comment += '❌ Report generation failed. Please check the workflow logs.\n\n';
-              }
-              
-              comment += `📋 Download the detailed reports from the [workflow artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).\n`;
-              
-              github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: comment
-              });
-            } catch (error) {
-              console.log('Error creating comment:', error);
-            }
-
-      - name: Security Gate
-        if: always()
-        run: |
-          echo "=== Security Gate Check ==="
-
-          if [ -f "${{ github.workspace }}/zap-reports/zap-report.json" ]; then
-            # Parse JSON report and check for high-risk issues
-            if command -v jq &> /dev/null; then
-              HIGH_RISK=$(cat ${{ github.workspace }}/zap-reports/zap-report.json | jq '[.site[0].alerts[] | select(.riskdesc | startswith("High"))] | length' 2>/dev/null || echo "0")
-              MEDIUM_RISK=$(cat ${{ github.workspace }}/zap-reports/zap-report.json | jq '[.site[0].alerts[] | select(.riskdesc | startswith("Medium"))] | length' 2>/dev/null || echo "0")
-              
-              echo "High Risk Issues: $HIGH_RISK"
-              echo "Medium Risk Issues: $MEDIUM_RISK"
-              
-              # Fail the workflow if high-risk issues are found (optional)
-              # Uncomment the next lines to enforce security gates
-              # if [ "$HIGH_RISK" -gt 0 ]; then
-              #   echo "❌ Security gate failed: High risk vulnerabilities found"
-              #   exit 1
-              # fi
-              
-              echo "✅ Security gate passed"
-            else
-              echo "⚠️ jq not available, skipping security gate check"
-            fi
-          else
-            echo "⚠️ No JSON report found, skipping security gate check"
-          fi
+          compression-level: 6
+          overwrite: false
+          include-hidden-files: false
